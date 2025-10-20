@@ -1,0 +1,68 @@
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el modelo User.
+    Muestra información básica del usuario.
+    """
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'role']
+        read_only_fields = ['id']
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el registro de nuevos usuarios.
+    Valida que las contraseñas coincidan y hace hash de la contraseña.
+    """
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password'},
+        min_length=8
+    )
+    password2 = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password'},
+        label='Confirmar contraseña'
+    )
+    
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'password2', 'role']
+        extra_kwargs = {
+            'email': {'required': True}
+        }
+    
+    def validate(self, attrs):
+        """
+        Valida que las contraseñas coincidan.
+        """
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({
+                'password': 'Las contraseñas no coinciden.'
+            })
+        return attrs
+    
+    def create(self, validated_data):
+        """
+        Crea un nuevo usuario con la contraseña hasheada.
+        """
+        # Eliminar password2 ya que no es parte del modelo
+        validated_data.pop('password2')
+        
+        # Crear usuario con contraseña hasheada
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password'],
+            role=validated_data.get('role', 'CLIENTE')
+        )
+        
+        return user
