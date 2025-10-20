@@ -153,6 +153,27 @@ El servidor estará disponible en: **http://localhost:8000**
 | POST | `/api/users/register/` | Registrar nuevo usuario | No requerida |
 | POST | `/api/token/` | Obtener tokens JWT | No requerida |
 | POST | `/api/token/refresh/` | Refrescar access token | Refresh token |
+| GET | `/api/users/profiles/` | Listar perfiles de clientes | JWT (Admin: todos, Cliente: propio) |
+| GET | `/api/users/profiles/{id}/` | Ver perfil específico | JWT |
+| POST | `/api/users/profiles/` | Crear perfil de cliente | JWT |
+| PUT/PATCH | `/api/users/profiles/{id}/` | Actualizar perfil | JWT |
+| DELETE | `/api/users/profiles/{id}/` | Eliminar perfil | JWT (Solo Admin) |
+
+### 📦 Productos y Categorías
+
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| GET | `/api/categories/` | Listar todas las categorías | No requerida |
+| GET | `/api/categories/{id}/` | Ver categoría específica | No requerida |
+| POST | `/api/categories/` | Crear nueva categoría | JWT (Solo Admin) |
+| PUT/PATCH | `/api/categories/{id}/` | Actualizar categoría | JWT (Solo Admin) |
+| DELETE | `/api/categories/{id}/` | Eliminar categoría | JWT (Solo Admin) |
+| GET | `/api/products/` | Listar todos los productos | No requerida |
+| GET | `/api/products/?category={id}` | Filtrar productos por categoría | No requerida |
+| GET | `/api/products/{id}/` | Ver producto específico | No requerida |
+| POST | `/api/products/` | Crear nuevo producto | JWT (Solo Admin) |
+| PUT/PATCH | `/api/products/{id}/` | Actualizar producto | JWT (Solo Admin) |
+| DELETE | `/api/products/{id}/` | Eliminar producto | JWT (Solo Admin) |
 
 ### 📚 Documentación
 
@@ -192,10 +213,18 @@ SmartSales-backend/
 │
 ├── users/                       # App de gestión de usuarios
 │   ├── migrations/              # Migraciones de base de datos
-│   ├── models.py               # Modelo User personalizado
-│   ├── serializers.py          # Serializers (UserSerializer, RegisterSerializer)
-│   ├── views.py                # Vistas (RegisterView)
+│   ├── models.py               # Modelo User y ClientProfile
+│   ├── serializers.py          # Serializers (User, Register, ClientProfile)
+│   ├── views.py                # Vistas (RegisterView, ClientProfileViewSet)
 │   ├── urls.py                 # URLs de la app users
+│   └── admin.py                # Configuración del admin
+│
+├── products/                    # App de gestión de productos
+│   ├── migrations/              # Migraciones de base de datos
+│   ├── models.py               # Modelos Category y Product
+│   ├── serializers.py          # Serializers (Category, Product)
+│   ├── views.py                # ViewSets (CategoryViewSet, ProductViewSet)
+│   ├── urls.py                 # URLs de la app products
 │   └── admin.py                # Configuración del admin
 │
 ├── .gitignore                   # Archivos ignorados por Git
@@ -217,8 +246,23 @@ SmartSales-backend/
 - [x] Endpoint de registro de usuarios
 - [x] Documentación Swagger/OpenAPI
 - [x] Configuración de CORS
+- [x] Panel de administración configurado
 
-### 🔜 FASE 2: Gestión de Productos (Próximamente)
+### ✅ FASE 2: Módulo de Gestión Comercial (Completada)
+
+- [x] App `products` creada
+- [x] Modelo `Category` (categorías de productos)
+- [x] Modelo `Product` (productos con precio, stock, marca, garantía)
+- [x] Modelo `ClientProfile` (perfiles extendidos de clientes)
+- [x] CRUD completo para categorías (ViewSet)
+- [x] CRUD completo para productos (ViewSet)
+- [x] CRUD de perfiles de clientes (ViewSet)
+- [x] Permisos: Admin puede todo, público puede ver productos
+- [x] Filtrado de productos por categoría
+- [x] Serializers con validaciones
+- [x] Panel de administración para productos y categorías
+
+### 🔜 FASE 3: Gestión de Ventas (Próximamente)
 
 - [ ] Modelo de Productos
 - [ ] CRUD de productos
@@ -227,10 +271,11 @@ SmartSales-backend/
 
 ### 🔜 FASE 3: Gestión de Ventas (Próximamente)
 
-- [ ] Modelo de Ventas y Detalles
+- [ ] Modelo de Ventas y Detalles de Venta
 - [ ] Carrito de compras
 - [ ] Proceso de checkout
-- [ ] Historial de ventas
+- [ ] Historial de ventas por cliente
+- [ ] Gestión de estados de venta
 
 ### 🔜 FASE 4: Reportes y Analytics (Próximamente)
 

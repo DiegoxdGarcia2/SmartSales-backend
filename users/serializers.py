@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from .models import ClientProfile
 
 User = get_user_model()
 
@@ -66,3 +67,34 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         
         return user
+
+
+class ClientProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el perfil de cliente.
+    """
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    
+    class Meta:
+        model = ClientProfile
+        fields = [
+            'id',
+            'user',
+            'username',
+            'email',
+            'full_name',
+            'phone_number',
+            'address',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'username', 'email', 'created_at', 'updated_at']
+    
+    def validate_phone_number(self, value):
+        """
+        Valida el formato del número de teléfono.
+        """
+        if value and not value.replace('+', '').replace('-', '').replace(' ', '').isdigit():
+            raise serializers.ValidationError("El número de teléfono debe contener solo números.")
+        return value

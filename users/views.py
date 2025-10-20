@@ -1,7 +1,9 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterSerializer, UserSerializer
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from .serializers import RegisterSerializer, UserSerializer, ClientProfileSerializer
+from .models import ClientProfile
 
 
 class RegisterView(generics.CreateAPIView):
@@ -27,3 +29,30 @@ class RegisterView(generics.CreateAPIView):
             },
             status=status.HTTP_201_CREATED
         )
+
+
+class ClientProfileViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar los perfiles de clientes.
+    - Los clientes solo pueden ver y actualizar su propio perfil.
+    - Los administradores pueden ver y gestionar todos los perfiles.
+    """
+    queryset = ClientProfile.objects.all()
+    serializer_class = ClientProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """
+        Los clientes solo ven su propio perfil.
+        Los administradores ven todos.
+        """
+        user = self.request.user
+        if user.is_staff:
+            return ClientProfile.objects.all()
+        return ClientProfile.objects.filter(user=user)
+    
+    def perform_create(self, serializer):
+        """
+        Al crear un perfil, asigna automáticamente el usuario actual.
+        """
+        serializer.save(user=self.request.user)

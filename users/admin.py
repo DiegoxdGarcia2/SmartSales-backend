@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
+from .models import ClientProfile
 
 User = get_user_model()
 
@@ -42,3 +43,28 @@ class UserAdmin(BaseUserAdmin):
     
     # Campos de solo lectura
     readonly_fields = ['date_joined', 'last_login']
+
+
+@admin.register(ClientProfile)
+class ClientProfileAdmin(admin.ModelAdmin):
+    """
+    Configuración del panel de administración para el perfil de clientes.
+    """
+    list_display = ['user', 'full_name', 'phone_number', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'user__email', 'full_name', 'phone_number']
+    ordering = ['-created_at']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Usuario', {
+            'fields': ('user',)
+        }),
+        ('Información del Cliente', {
+            'fields': ('full_name', 'phone_number', 'address')
+        }),
+        ('Fechas', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
