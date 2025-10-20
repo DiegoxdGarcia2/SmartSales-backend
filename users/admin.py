@@ -1,3 +1,44 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth import get_user_model
 
-# Register your models here.
+User = get_user_model()
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    """
+    Configuración del panel de administración para el modelo User personalizado.
+    """
+    # Campos que se mostrarán en la lista de usuarios
+    list_display = ['username', 'email', 'role', 'is_staff', 'is_active', 'date_joined']
+    list_filter = ['role', 'is_staff', 'is_active', 'date_joined']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering = ['-date_joined']
+    
+    # Configuración de los fieldsets para el formulario de edición
+    fieldsets = (
+        (None, {
+            'fields': ('username', 'password')
+        }),
+        ('Información Personal', {
+            'fields': ('first_name', 'last_name', 'email')
+        }),
+        ('Rol y Permisos', {
+            'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+        }),
+        ('Fechas Importantes', {
+            'fields': ('last_login', 'date_joined')
+        }),
+    )
+    
+    # Configuración de los fieldsets para la creación de usuario
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2', 'role'),
+        }),
+    )
+    
+    # Campos de solo lectura
+    readonly_fields = ['date_joined', 'last_login']
