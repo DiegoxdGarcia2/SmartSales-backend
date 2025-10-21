@@ -156,5 +156,32 @@ SPECTACULAR_SETTINGS = {
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # Puerto estándar de React
+    'http://localhost:3000',   # Puerto estándar de React
+    'http://localhost:3039',   # Puerto de desarrollo actual
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3039',
 ]
+
+# Permite todos los headers y métodos para CORS
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_CREDENTIALS = True

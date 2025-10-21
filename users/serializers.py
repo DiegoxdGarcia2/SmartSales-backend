@@ -1,8 +1,72 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import get_user_model, authenticate
 from .models import ClientProfile
 
 User = get_user_model()
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Serializer personalizado para obtener tokens JWT.
+    Permite autenticación con username o email.
+    """
+    
+    def validate(self, attrs):
+        """
+        Valida las credenciales permitiendo login con username o email.
+        """
+        # Obtener las credenciales
+        username_or_email = attrs.get('username')
+        password = attrs.get('password')
+        
+        # Primer intento: autenticar con username
+        user = authenticate(
+            request=self.context.get('request'),
+            username=username_or_email,
+            password=password
+        )
+        
+        # Segundo intento: si falla, intentar con email
+        if user is None:
+            try:
+                # Buscar usuario por email
+                user_obj = User.objects.get(email=username_or_email)
+                # Intentar autenticar con el username del usuario encontrado
+                user = authenticate(
+                    request=self.context.get('request'),
+                    username=user_obj.username,
+                    password=password
+                )
+            except User.DoesNotExist:
+                user = None
+        
+        # Si ambos intentos fallaron, lanzar error
+        if user is None:
+            raise AuthenticationFailed(
+                'No se encontró ninguna cuenta activa con las credenciales proporcionadas.'
+            )
+        
+        # Si el usuario está inactivo
+        if not user.is_active:
+            raise AuthenticationFailed('Esta cuenta está desactivada.')
+        
+        # Actualizar attrs con el username correcto para que el padre lo procese
+        attrs['username'] = user.username
+        
+        # Llamar al método validate del padre para generar los tokens
+        data = super().validate(attrs)
+        
+        # Añadir información adicional al response (opcional)
+        data['user'] = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+        }
+        
+        return data
 
 
 class UserSerializer(serializers.ModelSerializer):

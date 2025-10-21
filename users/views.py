@@ -2,8 +2,17 @@ from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from .serializers import RegisterSerializer, UserSerializer, ClientProfileSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import RegisterSerializer, UserSerializer, ClientProfileSerializer, MyTokenObtainPairSerializer
 from .models import ClientProfile
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    """
+    Vista personalizada para obtener tokens JWT.
+    Permite autenticación con username o email.
+    """
+    serializer_class = MyTokenObtainPairSerializer
 
 
 class RegisterView(generics.CreateAPIView):
