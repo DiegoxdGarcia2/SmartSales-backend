@@ -2,9 +2,19 @@ from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model, authenticate
-from .models import ClientProfile
+from .models import ClientProfile, Role
 
 User = get_user_model()
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el modelo Role.
+    """
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'description']
+        read_only_fields = ['id']
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -12,6 +22,26 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     Serializer personalizado para obtener tokens JWT.
     Permite autenticación con username o email.
     """
+    
+    @classmethod
+    def get_token(cls, user):
+        """
+        Añade claims personalizados al token JWT.
+        Incluye información del rol del usuario.
+        """
+        token = super().get_token(user)
+
+        # Añadir claims personalizados
+        token['username'] = user.username
+        token['email'] = user.email
+        if user.role:  # Asegurarse de que el usuario tenga un rol asignado
+            token['role_id'] = user.role.id
+            token['role_name'] = user.role.name
+        else:
+            token['role_id'] = None
+            token['role_name'] = None
+
+        return token
     
     def validate(self, attrs):
         """
@@ -63,7 +93,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'id': user.id,
             'username': user.username,
             'email': user.email,
-            'role': user.role,
+            'role': user.role.name if user.role else None,
         }
         
         return data
@@ -74,9 +104,17 @@ class UserSerializer(serializers.ModelSerializer):
     Serializer para el modelo User.
     Muestra información básica del usuario.
     """
+    role = RoleSerializer(read_only=True)
+    role_id = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(),
+        source='role',
+        write_only=True,
+        required=False
+    )
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role']
+        fields = ['id', 'username', 'email', 'role', 'role_id']
         read_only_fields = ['id']
 
 
@@ -97,10 +135,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         style={'input_type': 'password'},
         label='Confirmar contraseña'
     )
+    role_id = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(),
+        source='role',
+        required=False,
+        allow_null=True
+    )
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password2', 'role']
+        fields = ['username', 'email', 'password', 'password2', 'role_id']
         extra_kwargs = {
             'email': {'required': True}
         }
@@ -122,12 +166,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Eliminar password2 ya que no es parte del modelo
         validated_data.pop('password2')
         
+        # Si no se proporciona rol, asignar CLIENTE por defecto
+        if 'role' not in validated_data or validated_data['role'] is None:
+            try:
+                default_role = Role.objects.get(name='CLIENTE')
+                validated_data['role'] = default_role
+            except Role.DoesNotExist:
+                pass  # Si no existe el rol CLIENTE, quedará como None
+        
         # Crear usuario con contraseña hasheada
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
-            role=validated_data.get('role', 'CLIENTE')
+            role=validated_data.get('role')
         )
         
         return user

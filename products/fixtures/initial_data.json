@@ -1,0 +1,124 @@
+[
+  {
+    "model": "products.category",
+    "pk": 1,
+    "fields": {
+      "name": "Televisores",
+      "description": "Televisores de última generación con tecnología Smart TV y resolución 4K"
+    }
+  },
+  {
+    "model": "products.category",
+    "pk": 2,
+    "fields": {
+      "name": "Refrigeradores",
+      "description": "Refrigeradores modernos con tecnología de enfriamiento eficiente"
+    }
+  },
+  {
+    "model": "products.category",
+    "pk": 3,
+    "fields": {
+      "name": "Lavadoras",
+      "description": "Lavadoras de alta capacidad con múltiples programas de lavado"
+    }
+  },
+  {
+    "model": "products.category",
+    "pk": 4,
+    "fields": {
+      "name": "Microondas",
+      "description": "Microondas con funciones avanzadas de cocción y descongelado"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 1,
+    "fields": {
+      "name": "TV Samsung 55\" QLED",
+      "description": "Smart TV 4K con tecnología QLED, HDR10+ y sistema operativo Tizen",
+      "price": "5499.90",
+      "stock": 15,
+      "category": 1,
+      "marca": "Samsung",
+      "garantia": "1 año",
+      "created_at": "2025-10-01T10:00:00Z",
+      "updated_at": "2025-10-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 2,
+    "fields": {
+      "name": "TV LG 50\" NanoCell",
+      "description": "Smart TV 4K con tecnología NanoCell, webOS y control por voz",
+      "price": "4299.90",
+      "stock": 20,
+      "category": 1,
+      "marca": "LG",
+      "garantia": "1 año",
+      "created_at": "2025-10-02T11:00:00Z",
+      "updated_at": "2025-10-02T11:00:00Z"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 3,
+    "fields": {
+      "name": "Refrigerador Samsung Side by Side",
+      "description": "Refrigerador de 600 litros con dispensador de agua y hielo, tecnología Twin Cooling",
+      "price": "7899.00",
+      "stock": 8,
+      "category": 2,
+      "marca": "Samsung",
+      "garantia": "2 años",
+      "created_at": "2025-10-05T09:30:00Z",
+      "updated_at": "2025-10-05T09:30:00Z"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 4,
+    "fields": {
+      "name": "Lavadora LG 18kg Carga Frontal",
+      "description": "Lavadora automática con motor Inverter Direct Drive, 14 programas de lavado",
+      "price": "3599.00",
+      "stock": 12,
+      "category": 3,
+      "marca": "LG",
+      "garantia": "1 año",
+      "created_at": "2025-10-08T14:00:00Z",
+      "updated_at": "2025-10-08T14:00:00Z"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 5,
+    "fields": {
+      "name": "Microondas Oster 1.1 pies cúbicos",
+      "description": "Microondas de 1000W con 10 niveles de potencia y plato giratorio",
+      "price": "599.90",
+      "stock": 25,
+      "category": 4,
+      "marca": "Oster",
+      "garantia": "1 año",
+      "created_at": "2025-10-10T16:00:00Z",
+      "updated_at": "2025-10-10T16:00:00Z"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 6,
+    "fields": {
+      "name": "TV Sony 65\" Bravia XR OLED",
+      "description": "Smart TV 4K OLED con procesador Cognitive XR y Google TV",
+      "price": "9999.00",
+      "stock": 5,
+      "category": 1,
+      "marca": "Sony",
+      "garantia": "2 años",
+      "created_at": "2025-10-12T12:00:00Z",
+      "updated_at": "2025-10-12T12:00:00Z"
+    }
+  }
+]

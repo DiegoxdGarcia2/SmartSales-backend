@@ -3,21 +3,51 @@ from django.db import models
 from django.conf import settings
 
 
+class Role(models.Model):
+    """
+    Modelo para los roles del sistema.
+    Permite gestionar roles de forma dinámica.
+    """
+    name = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name='Nombre del rol'
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Descripción'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha de creación'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Última actualización'
+    )
+    
+    class Meta:
+        verbose_name = 'Rol'
+        verbose_name_plural = 'Roles'
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractUser):
     """
     Modelo de Usuario personalizado para SmartSales365.
     Extiende AbstractUser para añadir roles personalizados.
     """
-    ROLE_CHOICES = [
-        ('ADMINISTRADOR', 'Administrador'),
-        ('CLIENTE', 'Cliente'),
-    ]
-    
-    role = models.CharField(
-        max_length=20,
-        choices=ROLE_CHOICES,
-        default='CLIENTE',
-        verbose_name='Rol'
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.PROTECT,
+        related_name='users',
+        verbose_name='Rol',
+        null=True,
+        blank=True
     )
     
     class Meta:
@@ -25,7 +55,8 @@ class User(AbstractUser):
         verbose_name_plural = 'Usuarios'
     
     def __str__(self):
-        return f"{self.username} ({self.get_role_display()})"
+        role_name = self.role.name if self.role else 'Sin rol'
+        return f"{self.username} ({role_name})"
 
 
 class ClientProfile(models.Model):

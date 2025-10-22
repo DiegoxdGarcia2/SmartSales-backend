@@ -1,9 +1,30 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
-from .models import ClientProfile
+from .models import ClientProfile, Role
 
 User = get_user_model()
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    """
+    Configuración del panel de administración para el modelo Role.
+    """
+    list_display = ['name', 'description', 'created_at']
+    search_fields = ['name', 'description']
+    ordering = ['name']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Información del Rol', {
+            'fields': ('name', 'description')
+        }),
+        ('Fechas', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(User)

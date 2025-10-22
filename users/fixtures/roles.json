@@ -1,0 +1,22 @@
+[
+  {
+    "model": "users.role",
+    "pk": 1,
+    "fields": {
+      "name": "ADMINISTRADOR",
+      "description": "Administrador del sistema con acceso completo a todas las funcionalidades",
+      "created_at": "2025-10-01T10:00:00Z",
+      "updated_at": "2025-10-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "users.role",
+    "pk": 2,
+    "fields": {
+      "name": "CLIENTE",
+      "description": "Cliente del sistema con permisos para realizar compras y gestionar su perfil",
+      "created_at": "2025-10-01T10:00:00Z",
+      "updated_at": "2025-10-01T10:00:00Z"
+    }
+  }
+]

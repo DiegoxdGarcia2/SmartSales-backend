@@ -63,3 +63,7 @@ coverage.xml
 
 # mypy
 .mypy_cache/
+
+# Testing scripts and temporary files
+_testing_scripts/
+*.txt
