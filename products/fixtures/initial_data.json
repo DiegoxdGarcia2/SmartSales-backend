@@ -32,6 +32,50 @@
     }
   },
   {
+    "model": "products.brand",
+    "pk": 1,
+    "fields": {
+      "name": "Samsung",
+      "description": "Líder mundial en tecnología y electrónica de consumo",
+      "warranty_info": "Garantía estándar de 1 año en productos de línea blanca y televisores. 2 años en refrigeradores premium.",
+      "created_at": "2025-01-01T08:00:00Z",
+      "updated_at": "2025-01-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "products.brand",
+    "pk": 2,
+    "fields": {
+      "name": "LG",
+      "description": "Innovación en electrodomésticos y entretenimiento en el hogar",
+      "warranty_info": "Garantía de 1 año en todos los productos. 10 años en motores Inverter Direct Drive.",
+      "created_at": "2025-01-01T08:00:00Z",
+      "updated_at": "2025-01-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "products.brand",
+    "pk": 3,
+    "fields": {
+      "name": "Sony",
+      "description": "Excelencia en audio, video y entretenimiento",
+      "warranty_info": "Garantía de 2 años en televisores premium OLED y QLED. 1 año en productos estándar.",
+      "created_at": "2025-01-01T08:00:00Z",
+      "updated_at": "2025-01-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "products.brand",
+    "pk": 4,
+    "fields": {
+      "name": "Oster",
+      "description": "Calidad y durabilidad en pequeños electrodomésticos",
+      "warranty_info": "Garantía de 1 año en todos los productos. Servicio técnico autorizado en todo el país.",
+      "created_at": "2025-01-01T08:00:00Z",
+      "updated_at": "2025-01-01T08:00:00Z"
+    }
+  },
+  {
     "model": "products.product",
     "pk": 1,
     "fields": {
@@ -40,8 +84,7 @@
       "price": "5499.90",
       "stock": 15,
       "category": 1,
-      "marca": "Samsung",
-      "garantia": "1 año",
+      "brand": 1,
       "created_at": "2025-10-01T10:00:00Z",
       "updated_at": "2025-10-01T10:00:00Z"
     }
@@ -55,8 +98,7 @@
       "price": "4299.90",
       "stock": 20,
       "category": 1,
-      "marca": "LG",
-      "garantia": "1 año",
+      "brand": 2,
       "created_at": "2025-10-02T11:00:00Z",
       "updated_at": "2025-10-02T11:00:00Z"
     }
@@ -70,8 +112,7 @@
       "price": "7899.00",
       "stock": 8,
       "category": 2,
-      "marca": "Samsung",
-      "garantia": "2 años",
+      "brand": 1,
       "created_at": "2025-10-05T09:30:00Z",
       "updated_at": "2025-10-05T09:30:00Z"
     }
@@ -85,8 +126,7 @@
       "price": "3599.00",
       "stock": 12,
       "category": 3,
-      "marca": "LG",
-      "garantia": "1 año",
+      "brand": 2,
       "created_at": "2025-10-08T14:00:00Z",
       "updated_at": "2025-10-08T14:00:00Z"
     }
@@ -100,8 +140,7 @@
       "price": "599.90",
       "stock": 25,
       "category": 4,
-      "marca": "Oster",
-      "garantia": "1 año",
+      "brand": 4,
       "created_at": "2025-10-10T16:00:00Z",
       "updated_at": "2025-10-10T16:00:00Z"
     }
@@ -115,8 +154,7 @@
       "price": "9999.00",
       "stock": 5,
       "category": 1,
-      "marca": "Sony",
-      "garantia": "2 años",
+      "brand": 3,
       "created_at": "2025-10-12T12:00:00Z",
       "updated_at": "2025-10-12T12:00:00Z"
     }

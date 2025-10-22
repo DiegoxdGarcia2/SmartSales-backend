@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product
+from .models import Category, Product, Brand
 
 
 @admin.register(Category)
@@ -20,26 +20,52 @@ class CategoryAdmin(admin.ModelAdmin):
     get_products_count.short_description = 'Número de Productos'
 
 
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    """
+    Configuración del panel de administración para Brand.
+    """
+    list_display = ['name', 'warranty_info', 'get_products_count', 'updated_at']
+    search_fields = ['name', 'description']
+    ordering = ['name']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Información de la Marca', {
+            'fields': ('name', 'description', 'warranty_info')
+        }),
+        ('Fechas', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_products_count(self, obj):
+        """
+        Muestra el número de productos de esta marca.
+        """
+        return obj.products.count()
+    
+    get_products_count.short_description = 'Número de Productos'
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     """
     Configuración del panel de administración para Product.
     """
-    list_display = ['name', 'category', 'price', 'stock', 'marca', 'created_at']
-    list_filter = ['category', 'marca', 'created_at']
-    search_fields = ['name', 'description', 'marca']
+    list_display = ['name', 'category', 'brand', 'price', 'stock', 'created_at']
+    list_filter = ['category', 'brand', 'created_at']
+    search_fields = ['name', 'description', 'brand__name']
     ordering = ['-created_at']
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('name', 'description', 'category')
+            'fields': ('name', 'description', 'category', 'brand')
         }),
         ('Precios e Inventario', {
             'fields': ('price', 'stock')
-        }),
-        ('Detalles Adicionales', {
-            'fields': ('marca', 'garantia')
         }),
         ('Fechas', {
             'fields': ('created_at', 'updated_at'),

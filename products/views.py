@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions
 from rest_framework.permissions import IsAdminUser, AllowAny
-from .models import Category, Product
-from .serializers import CategorySerializer, ProductSerializer
+from .models import Category, Product, Brand
+from .serializers import CategorySerializer, ProductSerializer, BrandSerializer
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -27,6 +27,17 @@ class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
 
+class BrandViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar las marcas de productos.
+    GET: Todos pueden ver
+    POST, PUT, PATCH, DELETE: Solo administradores
+    """
+    queryset = Brand.objects.all()
+    serializer_class = BrandSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar los productos.
@@ -39,13 +50,17 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Opcionalmente filtra productos por categoría usando query params.
-        Ejemplo: /api/products/?category=1
+        Opcionalmente filtra productos por categoría o marca usando query params.
+        Ejemplo: /api/products/?category=1&brand=2
         """
         queryset = Product.objects.all()
         category_id = self.request.query_params.get('category', None)
+        brand_id = self.request.query_params.get('brand', None)
         
         if category_id is not None:
             queryset = queryset.filter(category_id=category_id)
+        
+        if brand_id is not None:
+            queryset = queryset.filter(brand_id=brand_id)
         
         return queryset

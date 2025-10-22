@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product
+from .models import Category, Product, Brand
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -20,13 +20,45 @@ class CategorySerializer(serializers.ModelSerializer):
         return obj.products.count()
 
 
+class BrandSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el modelo Brand.
+    """
+    products_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Brand
+        fields = ['id', 'name', 'description', 'warranty_info', 'products_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_products_count(self, obj):
+        """
+        Retorna el número de productos de esta marca.
+        """
+        return obj.products.count()
+
+
 class ProductSerializer(serializers.ModelSerializer):
     """
     Serializer para el modelo Product.
-    Muestra el nombre de la categoría en lugar del ID.
+    Muestra detalles de categoría y marca.
     """
     category_name = serializers.CharField(source='category.name', read_only=True)
     category_detail = CategorySerializer(source='category', read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        source='category',
+        write_only=True
+    )
+    
+    brand = BrandSerializer(read_only=True)
+    brand_id = serializers.PrimaryKeyRelatedField(
+        queryset=Brand.objects.all(),
+        source='brand',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
     
     class Meta:
         model = Product
@@ -37,14 +69,15 @@ class ProductSerializer(serializers.ModelSerializer):
             'price',
             'stock',
             'category',
+            'category_id',
             'category_name',
             'category_detail',
-            'marca',
-            'garantia',
+            'brand',
+            'brand_id',
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'category_name', 'category_detail']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'category_name', 'category_detail', 'brand']
     
     def validate_price(self, value):
         """

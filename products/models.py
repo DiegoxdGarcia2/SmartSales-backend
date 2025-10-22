@@ -25,6 +25,43 @@ class Category(models.Model):
         return self.name
 
 
+class Brand(models.Model):
+    """
+    Modelo para las marcas de productos.
+    """
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name='Nombre'
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Descripción'
+    )
+    warranty_info = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Información de Garantía'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha de creación'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Última actualización'
+    )
+    
+    class Meta:
+        verbose_name = 'Marca'
+        verbose_name_plural = 'Marcas'
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
     """
     Modelo para los productos del sistema.
@@ -53,18 +90,13 @@ class Product(models.Model):
         related_name='products',
         verbose_name='Categoría'
     )
-    marca = models.CharField(
-        max_length=100,
-        blank=True,
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.SET_NULL,
+        related_name='products',
         null=True,
+        blank=True,
         verbose_name='Marca'
-    )
-    garantia = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        verbose_name='Garantía',
-        help_text='Ejemplo: 1 año, 6 meses, etc.'
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
