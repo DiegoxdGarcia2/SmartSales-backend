@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: smartsales-backend
+    env: docker
+    plan: free
+    
+    # Configuración de la base de datos PostgreSQL
+    databases:
+      - name: smartsalesdb
+        databaseName: smartsales_db
+        user: smartsales_user
+    
+    # Variables de entorno
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      
+      - key: DJANGO_DEBUG
+        value: "False"
+      
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ""
+      
+      # Configuración de seguridad
+      - key: DJANGO_CSRF_COOKIE_SECURE
+        value: "True"
+      
+      - key: DJANGO_SESSION_COOKIE_SECURE
+        value: "True"
+      
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "False"
+      
+      # Stripe (configurar en el dashboard de Render)
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      
+      # URLs del frontend
+      - key: FRONTEND_CHECKOUT_SUCCESS_URL
+        value: "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}"
+      
+      - key: FRONTEND_CHECKOUT_CANCEL_URL
+        value: "http://localhost:3000/checkout/cancel"
+      
+      # Configuración de Gunicorn
+      - key: WEB_CONCURRENCY
+        value: "4"
