@@ -3,9 +3,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import transaction
-from django.shortcuts import get_object_or_404
+from django.shortcuts import render, get_object_or_404
+from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponseForbidden, HttpResponse, Http404
 from django.conf import settings
 import stripe
+import logging
 
 from .models import Cart, CartItem, Order, OrderItem
 from .serializers import (
@@ -15,6 +19,8 @@ from .serializers import (
     OrderCreateSerializer
 )
 from products.models import Product
+
+logger = logging.getLogger(__name__)
 
 
 class CartView(APIView):
@@ -375,3 +381,43 @@ class StripeWebhookView(APIView):
                     pass
 
         return Response(status=status.HTTP_200_OK)
+
+
+class OrderReceiptView(LoginRequiredMixin, View):
+    """
+    Vista para generar comprobante HTML de una orden
+    """
+    template_name = 'orders/receipt.html'
+    login_url = '/admin/login/'  # Redirigir al login de admin si no está autenticado
+
+    def get(self, request, order_id):
+        logger.debug(f"Intentando obtener recibo para orden {order_id} por usuario {request.user.id}")
+        
+        try:
+            # Obtener la orden con items y productos precargados
+            order = get_object_or_404(
+                Order.objects.prefetch_related('items', 'items__product', 'items__product__brand'),
+                id=order_id
+            )
+
+            # Verificar permisos: solo el dueño de la orden o staff
+            if order.user != request.user and not request.user.is_staff:
+                logger.warning(
+                    f"Acceso denegado: Usuario {request.user.id} intentó ver orden {order_id} "
+                    f"de usuario {order.user.id}"
+                )
+                return HttpResponseForbidden("No tienes permiso para ver este comprobante.")
+
+            logger.debug(f"Orden {order_id} encontrada. Renderizando template.")
+            context = {'order': order}
+            return render(request, self.template_name, context)
+
+        except Http404:
+            logger.error(f"Orden {order_id} no encontrada.")
+            raise
+        except Exception as e:
+            logger.error(
+                f"Error inesperado al obtener recibo para orden {order_id}: {e}",
+                exc_info=True
+            )
+            return HttpResponse("Ocurrió un error inesperado", status=500)
