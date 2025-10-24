@@ -79,12 +79,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
     """
     Serializer para items de la orden
     """
-    product_name = serializers.CharField(source='product.name', read_only=True)
+    product = ProductSerializer(read_only=True)
     item_price = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'price', 'item_price']
+        fields = ['id', 'product', 'quantity', 'price', 'item_price']
 
     def get_item_price(self, obj):
         """
