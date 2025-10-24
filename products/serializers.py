@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, Brand
+from .models import Category, Product, Brand, Review
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -94,3 +94,18 @@ class ProductSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("El stock no puede ser negativo.")
         return value
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el modelo Review.
+    """
+    # Mostrar el username en lugar del ID
+    user = serializers.StringRelatedField(read_only=True)
+    # Asegurar que el usuario se asigne automáticamente
+    user_id = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Review
+        fields = ['id', 'product', 'user', 'user_id', 'rating', 'comment', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']

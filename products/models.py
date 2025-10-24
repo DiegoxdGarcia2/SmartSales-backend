@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Category(models.Model):
@@ -114,3 +116,48 @@ class Product(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class Review(models.Model):
+    """
+    Modelo para las reseñas de productos.
+    """
+    product = models.ForeignKey(
+        Product,
+        related_name='reviews',
+        on_delete=models.CASCADE,
+        verbose_name='Producto'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='reviews',
+        on_delete=models.CASCADE,
+        verbose_name='Usuario'
+    )
+    rating = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name='Calificación (1-5)'
+    )
+    comment = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Comentario'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha de creación'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Última actualización'
+    )
+
+    class Meta:
+        verbose_name = 'Reseña'
+        verbose_name_plural = 'Reseñas'
+        # Evitar que un usuario deje más de una reseña por producto
+        unique_together = ('product', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Reseña de {self.user.username} para {self.product.name} ({self.rating} estrellas)'
