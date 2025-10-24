@@ -28,7 +28,7 @@ class BrandSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Brand
-        fields = ['id', 'name', 'description', 'warranty_info', 'products_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'warranty_info', 'warranty_duration_months', 'products_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_products_count(self, obj):

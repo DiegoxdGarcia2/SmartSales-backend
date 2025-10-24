@@ -25,14 +25,17 @@ class BrandAdmin(admin.ModelAdmin):
     """
     Configuración del panel de administración para Brand.
     """
-    list_display = ['name', 'warranty_info', 'get_products_count', 'updated_at']
+    list_display = ['name', 'warranty_duration_months', 'warranty_info', 'get_products_count', 'updated_at']
     search_fields = ['name', 'description']
     ordering = ['name']
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
         ('Información de la Marca', {
-            'fields': ('name', 'description', 'warranty_info')
+            'fields': ('name', 'description')
+        }),
+        ('Información de Garantía', {
+            'fields': ('warranty_duration_months', 'warranty_info')
         }),
         ('Fechas', {
             'fields': ('created_at', 'updated_at'),

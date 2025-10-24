@@ -46,6 +46,12 @@ class Brand(models.Model):
         null=True,
         verbose_name='Información de Garantía'
     )
+    warranty_duration_months = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Duración de Garantía (meses)',
+        help_text='Duración estándar de la garantía para esta marca en meses (ej: 12 para 1 año).'
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Fecha de creación'
