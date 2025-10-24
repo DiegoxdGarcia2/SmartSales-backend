@@ -289,10 +289,8 @@ class CreateCheckoutSessionView(APIView):
             order.stripe_checkout_id = checkout_session.id
             order.save()
 
-            return Response({
-                'sessionId': checkout_session.id,
-                'url': checkout_session.url
-            })
+            # Devolver la URL de la sesión de checkout
+            return Response({'url': checkout_session.url})
         except Exception as e:
             return Response(
                 {'error': str(e)},
