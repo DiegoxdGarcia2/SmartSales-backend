@@ -102,10 +102,8 @@ class ReviewSerializer(serializers.ModelSerializer):
     """
     # Mostrar el username en lugar del ID
     user = serializers.StringRelatedField(read_only=True)
-    # Asegurar que el usuario se asigne automáticamente
-    user_id = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = Review
-        fields = ['id', 'product', 'user', 'user_id', 'rating', 'comment', 'created_at', 'updated_at']
+        fields = ['id', 'product', 'user', 'rating', 'comment', 'created_at', 'updated_at']
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
