@@ -48,6 +48,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third party apps
+    'cloudinary_storage',
+    'cloudinary',
+    'django_cleanup.apps.CleanupConfig',
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
@@ -140,10 +143,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Configuración para Whitenoise (Django 4.2+)
+# Configuración para Whitenoise y Cloudinary (Django 4.2+)
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -225,3 +228,10 @@ FRONTEND_CHECKOUT_CANCEL_URL = os.environ.get('FRONTEND_CHECKOUT_CANCEL_URL', 'h
 
 # Configurar Stripe API key globalmente
 stripe.api_key = STRIPE_SECRET_KEY
+
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+}

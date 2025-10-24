@@ -57,7 +57,7 @@ class ProductAdmin(admin.ModelAdmin):
     """
     Configuración del panel de administración para Product.
     """
-    list_display = ['name', 'category', 'brand', 'price', 'stock', 'created_at']
+    list_display = ['name', 'category', 'brand', 'price', 'stock', 'image', 'created_at']
     list_filter = ['category', 'brand', 'created_at']
     search_fields = ['name', 'description', 'brand__name']
     ordering = ['-created_at']
@@ -65,7 +65,7 @@ class ProductAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Información Básica', {
-            'fields': ('name', 'description', 'category', 'brand')
+            'fields': ('name', 'description', 'category', 'brand', 'image')
         }),
         ('Precios e Inventario', {
             'fields': ('price', 'stock')

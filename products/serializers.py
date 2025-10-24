@@ -74,6 +74,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'category_detail',
             'brand',
             'brand_id',
+            'image',
             'created_at',
             'updated_at'
         ]

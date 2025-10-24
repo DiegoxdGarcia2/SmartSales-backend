@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
+from cloudinary.models import CloudinaryField
 
 
 class Category(models.Model):
@@ -105,6 +106,11 @@ class Product(models.Model):
         null=True,
         blank=True,
         verbose_name='Marca'
+    )
+    image = CloudinaryField(
+        blank=True,
+        null=True,
+        verbose_name='Imagen del Producto'
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
