@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, serializers as drf_serializers
 from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.exceptions import PermissionDenied
+from django.db import IntegrityError
 from .models import Category, Product, Brand, Review
 from .serializers import CategorySerializer, ProductSerializer, BrandSerializer, ReviewSerializer
 from .permissions import HasPurchasedProduct, IsReviewAuthorOrReadOnly
@@ -93,17 +94,28 @@ class ReviewViewSet(viewsets.ModelViewSet):
         Asigna el usuario automáticamente y valida que haya comprado el producto
         """
         user = self.request.user
-        product_id = serializer.validated_data['product'].id
+        product = serializer.validated_data['product']  # Obtener instancia del producto
 
-        # Validar si el usuario compró el producto ANTES de guardar
-        if not HasPurchasedProduct.check_purchase(user, product_id):
+        # 1. Validar si el usuario compró el producto
+        if not HasPurchasedProduct.check_purchase(user, product.id):
             raise PermissionDenied(HasPurchasedProduct.message)
 
-        # Validar si ya existe una reseña de este usuario para este producto
-        if Review.objects.filter(product_id=product_id, user=user).exists():
-            raise drf_serializers.ValidationError('Ya has dejado una reseña para este producto.')
+        # 2. Validar si ya existe una reseña (Hacerlo ANTES de intentar guardar)
+        #    Es buena práctica, aunque el unique_together lo asegura en DB.
+        if Review.objects.filter(product=product, user=user).exists():
+            # Usar ValidationError que el frontend puede interpretar mejor como 400
+            raise drf_serializers.ValidationError({'detail': 'Ya has dejado una reseña para este producto.'})
 
-        serializer.save(user=user)
+        # 3. Intentar guardar y manejar error de BD si ocurre (poco probable si la validación anterior funciona)
+        try:
+            serializer.save(user=user)
+        except IntegrityError:
+            # Esto captura el error si la validación anterior fallara por alguna razón (ej. condición de carrera)
+            raise drf_serializers.ValidationError({'detail': 'Error de integridad, posible reseña duplicada.'})
+        except Exception as e:
+            # Capturar otros posibles errores durante el save
+            # Considera loggear el error real 'e' aquí para depuración
+            raise drf_serializers.ValidationError({'detail': f'Ocurrió un error inesperado al guardar la reseña: {str(e)}'})
 
     def get_permissions(self):
         """
