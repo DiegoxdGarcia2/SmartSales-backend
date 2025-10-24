@@ -385,46 +385,56 @@ class StripeWebhookView(APIView):
         return Response(status=status.HTTP_200_OK)
 
 
-class OrderReceiptView(LoginRequiredMixin, View):
+class OrderReceiptView(APIView):
     """
     Vista para generar comprobante HTML de una orden.
-    Usa autenticación de sesión de Django (para acceso directo desde navegador).
+    Requiere autenticación JWT pero devuelve HTML renderizado.
     """
+    permission_classes = [IsAuthenticated]
     template_name = 'orders/receipt.html'
-    login_url = '/admin/login/'  # URL de login si el usuario no está autenticado
 
-    def get(self, request, order_id):
-        logger.debug(f"Intentando obtener recibo (sesión) para orden {order_id} por usuario {request.user.id}")
+    def get(self, request, order_id, format=None):
+        logger.debug(f"Intentando obtener recibo API para orden {order_id} por usuario {request.user.id} (JWT)")
         
         try:
             # Obtener la orden con items y productos precargados
-            order = get_object_or_404(
-                Order.objects.select_related('user').prefetch_related(
-                    'items',
-                    'items__product',
-                    'items__product__brand'
-                ),
-                id=order_id
-            )
+            order = Order.objects.select_related('user').prefetch_related(
+                'items',
+                'items__product',
+                'items__product__brand'
+            ).get(id=order_id)
 
             # Verificar permisos: solo el dueño de la orden o staff
             if order.user != request.user and not request.user.is_staff:
                 logger.warning(
-                    f"Acceso denegado (sesión): Usuario {request.user.id} intentó ver orden {order_id} "
+                    f"Acceso denegado API: Usuario {request.user.id} intentó ver orden {order_id} "
                     f"de usuario {order.user.id}"
                 )
-                return HttpResponseForbidden("No tienes permiso para ver este comprobante.")
+                # Devolver error DRF
+                return Response(
+                    {"detail": "No tienes permiso para ver este comprobante."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
-            logger.debug(f"Orden {order_id} encontrada (sesión). Renderizando template.")
+            logger.debug(f"Orden {order_id} encontrada API (JWT). Renderizando template a HTML.")
             context = {'order': order}
-            return render(request, self.template_name, context)
+            # Renderiza el template a una string HTML
+            html_content = render_to_string(self.template_name, context, request=request)
+            # Devuelve el HTML en una HttpResponse estándar
+            return HttpResponse(html_content, content_type='text/html')
 
-        except Http404:
-            logger.error(f"Orden {order_id} no encontrada (sesión).")
-            raise Http404("Pedido no encontrado")
+        except Order.DoesNotExist:
+            logger.error(f"Orden {order_id} no encontrada API (JWT).")
+            return Response(
+                {"detail": "Pedido no encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             logger.error(
-                f"Error inesperado (sesión) al obtener recibo para orden {order_id}: {e}",
+                f"Error inesperado API (JWT) al obtener recibo para orden {order_id}: {e}",
                 exc_info=True
             )
-            return HttpResponse("Ocurrió un error inesperado", status=500)
+            return Response(
+                {"detail": "Ocurrió un error inesperado al generar el comprobante."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
