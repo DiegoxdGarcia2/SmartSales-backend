@@ -23,9 +23,13 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 from users.views import MyTokenObtainPairView
+from orders.views import OrderReceiptView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Comprobante de orden (protegido por sesión de Django)
+    path('receipt/<int:order_id>/', OrderReceiptView.as_view(), name='order-receipt-html'),
     
     # API URLs
     path('api/users/', include('users.urls')),
