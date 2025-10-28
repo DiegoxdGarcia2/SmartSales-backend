@@ -77,7 +77,8 @@ class Product(models.Model):
     """
     name = models.CharField(
         max_length=255,
-        verbose_name='Nombre'
+        verbose_name='Nombre',
+        db_index=True  # Índice para búsquedas por nombre
     )
     description = models.TextField(
         blank=True,
@@ -87,7 +88,8 @@ class Product(models.Model):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        verbose_name='Precio'
+        verbose_name='Precio',
+        db_index=True  # Índice para ordenamiento/filtrado por precio
     )
     stock = models.IntegerField(
         default=0,
@@ -97,7 +99,8 @@ class Product(models.Model):
         Category,
         on_delete=models.CASCADE,
         related_name='products',
-        verbose_name='Categoría'
+        verbose_name='Categoría',
+        db_index=True  # Índice para filtrado por categoría
     )
     brand = models.ForeignKey(
         Brand,
@@ -105,7 +108,8 @@ class Product(models.Model):
         related_name='products',
         null=True,
         blank=True,
-        verbose_name='Marca'
+        verbose_name='Marca',
+        db_index=True  # Índice para filtrado por marca
     )
     image = CloudinaryField(
         blank=True,
@@ -114,7 +118,8 @@ class Product(models.Model):
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Fecha de creación'
+        verbose_name='Fecha de creación',
+        db_index=True  # Índice para ordenamiento por fecha
     )
     updated_at = models.DateTimeField(
         auto_now=True,
@@ -125,6 +130,10 @@ class Product(models.Model):
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['category', 'brand']),  # Índice compuesto para filtros combinados
+            models.Index(fields=['-created_at', 'category']),  # Para listados por categoría ordenados
+        ]
     
     def __str__(self):
         return self.name
@@ -138,17 +147,20 @@ class Review(models.Model):
         Product,
         related_name='reviews',
         on_delete=models.CASCADE,
-        verbose_name='Producto'
+        verbose_name='Producto',
+        db_index=True  # Índice para consultas por producto
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='reviews',
         on_delete=models.CASCADE,
-        verbose_name='Usuario'
+        verbose_name='Usuario',
+        db_index=True  # Índice para consultas por usuario
     )
     rating = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
-        verbose_name='Calificación (1-5)'
+        verbose_name='Calificación (1-5)',
+        db_index=True  # Índice para filtrado/ordenamiento por rating
     )
     comment = models.TextField(
         blank=True,
@@ -157,7 +169,8 @@ class Review(models.Model):
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Fecha de creación'
+        verbose_name='Fecha de creación',
+        db_index=True  # Índice para ordenamiento por fecha
     )
     updated_at = models.DateTimeField(
         auto_now=True,
@@ -170,6 +183,10 @@ class Review(models.Model):
         # Evitar que un usuario deje más de una reseña por producto
         unique_together = ('product', 'user')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['product', '-created_at']),  # Para reviews de un producto ordenadas
+            models.Index(fields=['product', 'rating']),  # Para filtrar por rating en un producto
+        ]
 
     def __str__(self):
         return f'Reseña de {self.user.username} para {self.product.name} ({self.rating} estrellas)'

@@ -95,20 +95,27 @@ class Order(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='orders',
-        verbose_name='Usuario'
+        verbose_name='Usuario',
+        db_index=True  # Índice para consultas por usuario
     )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='PENDIENTE',
-        verbose_name='Estado'
+        verbose_name='Estado',
+        db_index=True  # Índice para filtrado por estado
     )
     total_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        verbose_name='Precio Total'
+        verbose_name='Precio Total',
+        db_index=True  # Índice para ordenamiento/filtrado por precio
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Fecha de Creación',
+        db_index=True  # Índice para ordenamiento por fecha
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Última Actualización')
 
     # Campos opcionales para dirección de envío (pueden usarse datos de ClientProfile)
@@ -141,13 +148,19 @@ class Order(models.Model):
         max_length=20,
         choices=PAYMENT_STATUS_CHOICES,
         default='pendiente',
-        verbose_name='Estado de Pago'
+        verbose_name='Estado de Pago',
+        db_index=True  # Índice para filtrado por estado de pago
     )
 
     class Meta:
         verbose_name = 'Orden'
         verbose_name_plural = 'Órdenes'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),  # Para órdenes de un usuario ordenadas
+            models.Index(fields=['status', 'payment_status']),  # Para filtros combinados
+            models.Index(fields=['-created_at', 'user']),  # Para listados generales
+        ]
 
     def __str__(self):
         return f"Orden #{self.id} - {self.user.username}"
@@ -162,13 +175,15 @@ class OrderItem(models.Model):
         Order,
         on_delete=models.CASCADE,
         related_name='items',
-        verbose_name='Orden'
+        verbose_name='Orden',
+        db_index=True  # Índice para consultas por orden
     )
     product = models.ForeignKey(
         Product,
         on_delete=models.SET_NULL,
         null=True,
-        verbose_name='Producto'
+        verbose_name='Producto',
+        db_index=True  # Índice para consultas por producto
     )
     quantity = models.PositiveIntegerField(verbose_name='Cantidad')
     price = models.DecimalField(
@@ -180,6 +195,9 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = 'Item de Orden'
         verbose_name_plural = 'Items de Orden'
+        indexes = [
+            models.Index(fields=['order', 'product']),  # Para consultas de items por orden y producto
+        ]
 
     def __str__(self):
         product_name = self.product.name if self.product else "Producto eliminado"

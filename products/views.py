@@ -25,7 +25,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     GET: Todos pueden ver
     POST, PUT, PATCH, DELETE: Solo administradores
     """
-    queryset = Category.objects.all()
+    queryset = Category.objects.prefetch_related('products').all()
     serializer_class = CategorySerializer
     permission_classes = [IsAdminOrReadOnly]
 
@@ -36,7 +36,7 @@ class BrandViewSet(viewsets.ModelViewSet):
     GET: Todos pueden ver
     POST, PUT, PATCH, DELETE: Solo administradores
     """
-    queryset = Brand.objects.all()
+    queryset = Brand.objects.prefetch_related('products').all()
     serializer_class = BrandSerializer
     permission_classes = [IsAdminOrReadOnly]
 
@@ -47,7 +47,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     GET: Todos pueden ver
     POST, PUT, PATCH, DELETE: Solo administradores
     """
-    queryset = Product.objects.all()
+    queryset = Product.objects.select_related('category', 'brand').prefetch_related('reviews')
     serializer_class = ProductSerializer
     permission_classes = [IsAdminOrReadOnly]
     
@@ -55,8 +55,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         Opcionalmente filtra productos por categoría o marca usando query params.
         Ejemplo: /api/products/?category=1&brand=2
+        Optimizado con select_related para evitar N+1 queries
         """
-        queryset = Product.objects.all()
+        queryset = Product.objects.select_related('category', 'brand').prefetch_related('reviews')
         category_id = self.request.query_params.get('category', None)
         brand_id = self.request.query_params.get('brand', None)
         
