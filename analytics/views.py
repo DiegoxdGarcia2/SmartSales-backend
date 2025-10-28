@@ -3,14 +3,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser
-import pandas as pd
-import joblib
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
-from django.db.models import F, Sum
-from orders.models import Order, OrderItem
+from django.db.models import F
+from orders.models import OrderItem
 
+# NO importar pandas y joblib aquí - se cargarán solo cuando se necesiten
+# Esto reduce el uso de memoria en el servidor
 
 # Ruta del modelo entrenado
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_models', 'sales_model.joblib')
@@ -28,6 +28,11 @@ class SalesPredictionView(APIView):
         Predice las ventas mensuales para los próximos N meses.
         """
         try:
+            # Importar pandas y joblib solo cuando se necesiten (lazy loading)
+            # Esto reduce el uso de memoria del servidor
+            import pandas as pd
+            import joblib
+            
             # ========== 1. CARGAR MODELO ==========
             if not os.path.exists(MODEL_PATH):
                 return Response(
