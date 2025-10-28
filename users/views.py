@@ -48,8 +48,9 @@ class ClientProfileViewSet(viewsets.ModelViewSet):
     ViewSet para gestionar los perfiles de clientes.
     - Los clientes solo pueden ver y actualizar su propio perfil.
     - Los administradores pueden ver y gestionar todos los perfiles.
+    Optimizado con select_related para cargar el usuario relacionado
     """
-    queryset = ClientProfile.objects.all()
+    queryset = ClientProfile.objects.select_related('user').all()
     serializer_class = ClientProfileSerializer
     permission_classes = [IsAuthenticated]
     
@@ -57,11 +58,12 @@ class ClientProfileViewSet(viewsets.ModelViewSet):
         """
         Los clientes solo ven su propio perfil.
         Los administradores ven todos.
+        Optimizado con select_related
         """
         user = self.request.user
         if user.is_staff:
-            return ClientProfile.objects.all()
-        return ClientProfile.objects.filter(user=user)
+            return ClientProfile.objects.select_related('user').all()
+        return ClientProfile.objects.select_related('user').filter(user=user)
     
     def perform_create(self, serializer):
         """
@@ -98,8 +100,9 @@ class UserViewSet(viewsets.ModelViewSet):
     - POST: Crear usuario (solo admin)
     - PUT/PATCH: Actualizar usuario (admin puede actualizar cualquiera, usuario solo a sí mismo)
     - DELETE: Eliminar usuario (solo admin)
+    Optimizado con select_related para cargar el rol relacionado
     """
-    queryset = User.objects.all()
+    queryset = User.objects.select_related('role').all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
     
@@ -107,11 +110,12 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         Admins ven todos los usuarios.
         Usuarios normales solo se ven a sí mismos.
+        Optimizado con select_related
         """
         user = self.request.user
         if user.is_staff:
-            return User.objects.all()
-        return User.objects.filter(id=user.id)
+            return User.objects.select_related('role').all()
+        return User.objects.select_related('role').filter(id=user.id)
     
     def get_permissions(self):
         """

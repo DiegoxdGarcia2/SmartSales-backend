@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import render, get_object_or_404
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -167,6 +168,7 @@ class CartView(APIView):
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet para ver órdenes del usuario
+    Optimizado con select_related y prefetch_related para reducir queries
     """
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -174,8 +176,17 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """
         Retorna solo las órdenes del usuario autenticado
+        Optimizado con prefetch para cargar items, productos y marcas
         """
-        return Order.objects.filter(user=self.request.user).prefetch_related('items__product')
+        return Order.objects.filter(user=self.request.user).select_related(
+            'user'  # Carga el usuario de la orden
+        ).prefetch_related(
+            Prefetch('items', queryset=OrderItem.objects.select_related(
+                'product',  # Carga el producto del item
+                'product__brand',  # Carga la marca del producto del item
+                'product__category'  # Carga la categoría del producto
+            ))
+        ).order_by('-created_at')  # Ordenar por fecha descendente
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def create_order_from_cart(self, request):

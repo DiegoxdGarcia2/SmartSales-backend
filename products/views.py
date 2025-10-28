@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, serializers as drf_serializers
 from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.exceptions import PermissionDenied
 from django.db import IntegrityError
+from django.db.models import Prefetch
 from .models import Category, Product, Brand, Review
 from .serializers import CategorySerializer, ProductSerializer, BrandSerializer, ReviewSerializer
 from .permissions import HasPurchasedProduct, IsReviewAuthorOrReadOnly
@@ -46,8 +47,11 @@ class ProductViewSet(viewsets.ModelViewSet):
     ViewSet para gestionar los productos.
     GET: Todos pueden ver
     POST, PUT, PATCH, DELETE: Solo administradores
+    Optimizado con select_related y prefetch_related para reducir queries
     """
-    queryset = Product.objects.select_related('category', 'brand').prefetch_related('reviews')
+    queryset = Product.objects.select_related('category', 'brand').prefetch_related(
+        Prefetch('reviews', queryset=Review.objects.select_related('user'))
+    ).all()
     serializer_class = ProductSerializer
     permission_classes = [IsAdminOrReadOnly]
     
@@ -57,7 +61,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         Ejemplo: /api/products/?category=1&brand=2
         Optimizado con select_related para evitar N+1 queries
         """
-        queryset = Product.objects.select_related('category', 'brand').prefetch_related('reviews')
+        queryset = Product.objects.select_related('category', 'brand').prefetch_related(
+            Prefetch('reviews', queryset=Review.objects.select_related('user'))
+        )
         category_id = self.request.query_params.get('category', None)
         brand_id = self.request.query_params.get('brand', None)
         
