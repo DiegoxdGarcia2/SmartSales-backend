@@ -6,36 +6,36 @@ class CategorySerializer(serializers.ModelSerializer):
     """
     Serializer para el modelo Category.
     """
-    products_count = serializers.SerializerMethodField()
+    # products_count = serializers.SerializerMethodField()  # ELIMINADO: Causaba N+1 queries
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'products_count']
+        fields = ['id', 'name', 'description']  # Removido 'products_count'
         read_only_fields = ['id']
     
-    def get_products_count(self, obj):
-        """
-        Retorna el número de productos en esta categoría.
-        """
-        return obj.products.count()
+    # def get_products_count(self, obj):  # ELIMINADO: Método que causaba timeout
+    #     """
+    #     Retorna el número de productos en esta categoría.
+    #     """
+    #     return obj.products.count()
 
 
 class BrandSerializer(serializers.ModelSerializer):
     """
     Serializer para el modelo Brand.
     """
-    products_count = serializers.SerializerMethodField()
+    # products_count = serializers.SerializerMethodField()  # ELIMINADO: Causaba N+1 queries
     
     class Meta:
         model = Brand
-        fields = ['id', 'name', 'description', 'warranty_info', 'warranty_duration_months', 'products_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'warranty_info', 'warranty_duration_months', 'created_at', 'updated_at']  # Removido 'products_count'
         read_only_fields = ['id', 'created_at', 'updated_at']
     
-    def get_products_count(self, obj):
-        """
-        Retorna el número de productos de esta marca.
-        """
-        return obj.products.count()
+    # def get_products_count(self, obj):  # ELIMINADO: Método que causaba timeout
+    #     """
+    #     Retorna el número de productos de esta marca.
+    #     """
+    #     return obj.products.count()
 
 
 class ProductSerializer(serializers.ModelSerializer):
