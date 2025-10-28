@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from products.models import Product
 from decimal import Decimal
 
@@ -112,7 +113,7 @@ class Order(models.Model):
         db_index=True  # Índice para ordenamiento/filtrado por precio
     )
     created_at = models.DateTimeField(
-        auto_now_add=True,
+        default=timezone.now,  # Cambiado de auto_now_add=True para permitir fechas personalizadas
         verbose_name='Fecha de Creación',
         db_index=True  # Índice para ordenamiento por fecha
     )
