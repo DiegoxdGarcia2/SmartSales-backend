@@ -51,9 +51,6 @@ Thumbs.db
 *.sql
 *.sqlite
 
-# Machine Learning Models
-/ml_models/
-
 # Coverage reports
 htmlcov/
 .coverage
