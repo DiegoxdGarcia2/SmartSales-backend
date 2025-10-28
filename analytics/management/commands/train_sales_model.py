@@ -3,10 +3,12 @@ Comando de Django para entrenar el modelo de predicción de ventas.
 Carga datos históricos de órdenes pagadas, preprocesa, y entrena RandomForestRegressor.
 """
 import os
+import json
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.utils import timezone
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
@@ -181,6 +183,82 @@ class Command(BaseCommand):
         joblib.dump(model_data, MODEL_PATH)
         
         self.stdout.write(self.style.SUCCESS(f'✅ Modelo guardado en: {MODEL_PATH}'))
+        
+        # ==================== GENERAR Y GUARDAR PREDICCIONES ====================
+        self.stdout.write('\n🔮 Generando y guardando predicciones futuras...')
+        
+        try:
+            if monthly_sales.empty:
+                raise ValueError("No hay datos históricos para iniciar la predicción.")
+            
+            # Usar los datos más recientes para iniciar las predicciones
+            last_known_data = monthly_sales.iloc[-1]
+            last_month = pd.Timestamp(monthly_sales['month'].iloc[-1])  # Convertir explícitamente a Timestamp
+            
+            # Convertir todas las features a float para evitar problemas con Decimal
+            current_features_dict = {}
+            for feature in features:
+                value = last_known_data[feature]
+                current_features_dict[feature] = float(value) if pd.notna(value) else 0.0
+            
+            future_predictions = []
+            PREDICT_MONTHS = 6
+            
+            for i in range(PREDICT_MONTHS):
+                # Calcular el siguiente mes
+                next_month = last_month + relativedelta(months=i+1)
+                
+                # Actualizar features temporales
+                current_features_dict['year'] = float(next_month.year)
+                current_features_dict['month_num'] = float(next_month.month)
+                
+                # Preparar input para el modelo
+                input_df = pd.DataFrame([current_features_dict])
+                input_df = input_df[features]  # Asegurar orden correcto
+                
+                # Predecir
+                predicted_sales = model.predict(input_df)[0]
+                predicted_sales = max(0.0, float(predicted_sales))  # Evitar ventas negativas
+                
+                # Guardar predicción
+                future_predictions.append({
+                    'month': next_month.strftime('%Y-%m-%d'),
+                    'predicted_sales': predicted_sales
+                })
+                
+                # Actualizar features para la siguiente iteración
+                next_features_dict = current_features_dict.copy()
+                
+                # Desplazar lags
+                for j in range(6, 1, -1):
+                    if f'sales_lag_{j-1}' in next_features_dict:
+                        next_features_dict[f'sales_lag_{j}'] = next_features_dict[f'sales_lag_{j-1}']
+                
+                next_features_dict['sales_lag_1'] = predicted_sales
+                
+                # Recalcular promedios móviles
+                lags_for_mean = [
+                    next_features_dict.get(f'sales_lag_{k}', 0.0)
+                    for k in range(1, 7)
+                ]
+                
+                if len(lags_for_mean) >= 3:
+                    next_features_dict['sales_rolling_mean_3'] = sum(lags_for_mean[:3]) / 3
+                if len(lags_for_mean) >= 6:
+                    next_features_dict['sales_rolling_mean_6'] = sum(lags_for_mean[:6]) / 6
+                
+                current_features_dict = next_features_dict
+            
+            # Guardar predicciones en JSON
+            PREDICTIONS_PATH = os.path.join(MODEL_DIR, 'predictions.json')
+            with open(PREDICTIONS_PATH, 'w') as f:
+                json.dump(future_predictions, f, indent=4)
+            
+            self.stdout.write(self.style.SUCCESS(f'✅ Predicciones guardadas en: {PREDICTIONS_PATH}'))
+            self.stdout.write(f'   📅 Predicciones generadas para {PREDICT_MONTHS} meses futuros')
+            
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'❌ Error al generar/guardar predicciones: {e}'))
         
         # ==================== RESUMEN FINAL ====================
         self.stdout.write('\n' + '=' * 70)
