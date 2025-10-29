@@ -3,7 +3,8 @@ from .views import (
     SalesPredictionView,
     SalesHistoryByMonthView,
     SalesHistoryByCategoryView,
-    FrequentlyBoughtTogetherView
+    FrequentlyBoughtTogetherView,
+    ComplementaryCategoryRecsView
 )
 
 app_name = 'analytics'
@@ -13,4 +14,5 @@ urlpatterns = [
     path('sales_by_month/', SalesHistoryByMonthView.as_view(), name='sales-history-by-month'),
     path('sales_by_category/', SalesHistoryByCategoryView.as_view(), name='sales-history-by-category'),
     path('recommendations/frequently_bought_together/', FrequentlyBoughtTogetherView.as_view(), name='recommendations-fbt'),
+    path('recommendations/complementary_category/', ComplementaryCategoryRecsView.as_view(), name='recommendations-complementary'),
 ]

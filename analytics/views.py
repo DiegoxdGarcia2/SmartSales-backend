@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
 from django.conf import settings
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Count, Q
 from django.db.models.functions import TruncMonth
 from orders.models import OrderItem
 from products.models import Category, Product
@@ -247,3 +247,117 @@ class FrequentlyBoughtTogetherView(APIView):
         logger.info(f"Devolviendo {len(serializer.data)} recomendaciones para product_id={product_id}")
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ComplementaryCategoryRecsView(APIView):
+    """
+    Vista para obtener recomendaciones de productos complementarios basadas en categorías.
+    Utiliza el mapeo COMPLEMENTARY_CATEGORIES de settings.py para encontrar categorías relacionadas.
+    Retorna los productos más vendidos (populares) de esas categorías complementarias.
+    """
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    MAX_RECOMMENDATIONS = 3  # Número máximo de productos a recomendar
+    
+    def get(self, request, format=None):
+        """
+        Obtiene productos populares de categorías complementarias.
+        Query param: product_id (int)
+        """
+        # Validar parámetro product_id
+        product_id_str = request.query_params.get('product_id')
+        
+        if not product_id_str:
+            return Response(
+                {"detail": "Parámetro 'product_id' requerido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            product_id = int(product_id_str)
+        except ValueError:
+            return Response(
+                {"detail": "'product_id' debe ser un número entero."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        logger.info(f"Buscando recomendaciones complementarias para producto ID: {product_id}")
+        
+        try:
+            # 1. Obtener el producto y su categoría
+            current_product = Product.objects.select_related('category').only(
+                'id', 'category__name'
+            ).get(id=product_id)
+            
+            current_category_name = current_product.category.name if current_product.category else None
+            
+            if not current_category_name:
+                logger.warning(f"Producto {product_id} no tiene categoría asignada.")
+                return Response([], status=status.HTTP_200_OK)
+            
+            # 2. Obtener categorías complementarias del mapeo en settings
+            complementary_category_names = settings.COMPLEMENTARY_CATEGORIES.get(
+                current_category_name, []
+            )
+            
+            if not complementary_category_names:
+                logger.info(f"No hay categorías complementarias definidas para '{current_category_name}'.")
+                return Response([], status=status.HTTP_200_OK)
+            
+            logger.debug(
+                f"Categorías complementarias para '{current_category_name}': "
+                f"{complementary_category_names}"
+            )
+            
+            # 3. Encontrar los productos más populares (más vendidos) en esas categorías
+            # Contamos cuántas veces aparece cada producto en OrderItems de órdenes pagadas
+            popular_products_query = Product.objects.filter(
+                category__name__in=complementary_category_names  # Productos en categorías complementarias
+            ).exclude(
+                id=product_id  # Excluir el producto actual
+            ).annotate(
+                # Contar cuántas veces se vendió (en órdenes pagadas)
+                sales_count=Count(
+                    'orderitem',
+                    filter=Q(orderitem__order__payment_status='pagado')
+                )
+            ).filter(
+                sales_count__gt=0  # Solo productos que se hayan vendido al menos una vez
+            ).select_related(
+                'brand', 'category'  # Optimizar carga de relaciones
+            ).order_by(
+                '-sales_count'  # Ordenar por más vendidos primero
+            )
+            
+            # 4. Limitar a los N más vendidos
+            recommended_products = list(popular_products_query[:self.MAX_RECOMMENDATIONS])
+            
+            logger.info(
+                f"Encontrados {len(recommended_products)} productos complementarios populares "
+                f"para '{current_category_name}'."
+            )
+            
+            # 5. Serializar y devolver
+            serializer = ProductSerializer(
+                recommended_products,
+                many=True,
+                context={'request': request}
+            )
+            
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except Product.DoesNotExist:
+            logger.warning(f"Producto {product_id} no encontrado en la base de datos.")
+            return Response(
+                {"detail": "Producto no encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        except Exception as e:
+            logger.error(
+                f"Error al generar recomendaciones complementarias para producto {product_id}: {e}",
+                exc_info=True
+            )
+            return Response(
+                {"detail": "Error al generar recomendaciones."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -236,3 +236,37 @@ CLOUDINARY_STORAGE = {
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
 }
+
+# =============================================================================
+# MAPEO DE CATEGORÍAS COMPLEMENTARIAS PARA SISTEMA DE RECOMENDACIONES
+# =============================================================================
+# Define qué categorías de productos se recomiendan juntas.
+# Formato: 'Categoría Origen': ['Categoría Complementaria 1', 'Categoría Complementaria 2', ...]
+# Lógica de negocio: Si un cliente ve/compra un producto de la categoría origen,
+# se le recomiendan productos populares de las categorías complementarias.
+
+COMPLEMENTARY_CATEGORIES = {
+    # Entretenimiento en el hogar
+    'Televisores': ['Audio', 'Computación'],  # TV + Audio/Streaming devices
+    'Audio': ['Televisores', 'Computación'],  # Sistemas de audio + TV/PC
+    
+    # Cocina y alimentación
+    'Cocción': ['Refrigeración', 'Pequeños Electrodomésticos Cocina', 'Preparación de Alimentos', 'Microondas'],
+    'Refrigeración': ['Cocción', 'Pequeños Electrodomésticos Cocina', 'Preparación de Alimentos'],
+    'Refrigeradores': ['Cocción', 'Microondas', 'Pequeños Electrodomésticos Cocina'],
+    'Microondas': ['Refrigeración', 'Refrigeradores', 'Pequeños Electrodomésticos Cocina'],
+    'Pequeños Electrodomésticos Cocina': ['Preparación de Alimentos', 'Cocción', 'Microondas'],
+    'Preparación de Alimentos': ['Pequeños Electrodomésticos Cocina', 'Cocción'],
+    
+    # Lavado y limpieza
+    'Lavado y Secado': ['Limpieza del Hogar', 'Lavadoras'],  # Lavadora + aspiradora/plancha
+    'Lavadoras': ['Lavado y Secado', 'Limpieza del Hogar'],
+    'Limpieza del Hogar': ['Lavado y Secado', 'Lavadoras'],
+    
+    # Tecnología
+    'Computación': ['Computación', 'Audio'],  # Laptop -> Monitor/Teclado/Mouse o Auriculares
+    
+    # Confort
+    'Climatización': ['Climatización'],  # Aire acondicionado + ventiladores/calefactores
+    'Cuidado Personal': ['Cuidado Personal', 'Limpieza del Hogar'],  # Afeitadoras + secadores
+}
