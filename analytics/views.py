@@ -4,12 +4,13 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
 from django.conf import settings
 from django.db.models import F, Sum
 from django.db.models.functions import TruncMonth
 from orders.models import OrderItem
-from products.models import Category
+from products.models import Category, Product
+from products.serializers import ProductSerializer
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Rutas de archivos ML
 MODEL_DIR = os.path.join(settings.BASE_DIR, 'ml_models')
 PREDICTIONS_PATH = os.path.join(MODEL_DIR, 'predictions.json')
+ASSOC_PATH = os.path.join(MODEL_DIR, 'product_associations.json')
 
 
 class SalesPredictionView(APIView):
@@ -154,3 +156,94 @@ class SalesHistoryByCategoryView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class FrequentlyBoughtTogetherView(APIView):
+    """
+    Vista para obtener recomendaciones de productos frecuentemente comprados juntos.
+    Lee las asociaciones desde ml_models/product_associations.json generado por generate_associations.
+    """
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    # Cache de asociaciones en memoria (clase estática)
+    _associations = None
+    
+    @classmethod
+    def _load_associations(cls):
+        """
+        Carga las asociaciones de productos desde el archivo JSON.
+        Cachea el resultado en memoria para evitar lecturas repetidas.
+        """
+        if cls._associations is None:
+            logger.info(f"Cargando asociaciones de productos desde {ASSOC_PATH}")
+            
+            if not os.path.exists(ASSOC_PATH):
+                logger.warning("Archivo de asociaciones no encontrado. Devolviendo diccionario vacío.")
+                cls._associations = {}
+                return {}
+            
+            try:
+                with open(ASSOC_PATH, 'r') as f:
+                    data = json.load(f)
+                    # Convertir claves de string a int (JSON solo permite claves string)
+                    cls._associations = {int(k): v for k, v in data.items()}
+                
+                logger.info(f"Asociaciones cargadas exitosamente: {len(cls._associations)} productos con recomendaciones.")
+            
+            except Exception as e:
+                logger.error(f"Error al cargar/parsear asociaciones: {e}", exc_info=True)
+                cls._associations = {}
+        
+        return cls._associations
+    
+    def get(self, request, format=None):
+        """
+        Obtiene productos recomendados para un product_id dado.
+        Query param: product_id (int)
+        """
+        # Validar parámetro product_id
+        product_id_str = request.query_params.get('product_id')
+        
+        if not product_id_str:
+            return Response(
+                {"detail": "Parámetro 'product_id' requerido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            product_id = int(product_id_str)
+        except ValueError:
+            return Response(
+                {"detail": "'product_id' debe ser un número entero."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Cargar asociaciones (desde cache o archivo)
+        associations = self._load_associations()
+        
+        # Buscar recomendaciones para el product_id
+        recommended_ids = associations.get(product_id, [])
+        
+        if not recommended_ids:
+            logger.info(f"No hay recomendaciones para product_id={product_id}")
+            return Response([], status=status.HTTP_200_OK)
+        
+        # Obtener detalles de los productos recomendados
+        # Optimizar con select_related para evitar N+1 queries
+        recommended_products = Product.objects.filter(
+            id__in=recommended_ids
+        ).select_related('brand', 'category')
+        
+        # Limitar a las primeras 3 recomendaciones
+        recommended_products = recommended_products[:3]
+        
+        # Serializar productos
+        serializer = ProductSerializer(
+            recommended_products,
+            many=True,
+            context={'request': request}
+        )
+        
+        logger.info(f"Devolviendo {len(serializer.data)} recomendaciones para product_id={product_id}")
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
