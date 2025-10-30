@@ -1,12 +1,13 @@
 import os
 import json
 import logging
+import random
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
 from django.conf import settings
-from django.db.models import F, Sum, Count, Q
+from django.db.models import F, Sum, Count, Q, Avg
 from django.db.models.functions import TruncMonth
 from orders.models import OrderItem
 from products.models import Category, Product
@@ -228,14 +229,22 @@ class FrequentlyBoughtTogetherView(APIView):
             logger.info(f"No hay recomendaciones para product_id={product_id}")
             return Response([], status=status.HTTP_200_OK)
         
-        # Obtener detalles de los productos recomendados
+        # Seleccionar aleatoriamente 3 productos de las recomendaciones disponibles
+        # Esto añade variedad y dinamismo a las recomendaciones
+        if len(recommended_ids) > 3:
+            # Si hay más de 3, selecciona 3 al azar
+            sampled_ids = random.sample(recommended_ids, 3)
+            logger.info(f"IDs seleccionados aleatoriamente: {sampled_ids} de {len(recommended_ids)} posibles.")
+        else:
+            # Si hay 3 o menos, tómalos todos
+            sampled_ids = recommended_ids
+            logger.info(f"Usando todos los IDs disponibles: {sampled_ids}")
+        
+        # Obtener detalles de los productos seleccionados
         # Optimizar con select_related para evitar N+1 queries
         recommended_products = Product.objects.filter(
-            id__in=recommended_ids
+            id__in=sampled_ids
         ).select_related('brand', 'category')
-        
-        # Limitar a las primeras 3 recomendaciones
-        recommended_products = recommended_products[:3]
         
         # Serializar productos
         serializer = ProductSerializer(
@@ -308,31 +317,33 @@ class ComplementaryCategoryRecsView(APIView):
                 f"{complementary_category_names}"
             )
             
-            # 3. Encontrar los productos más populares (más vendidos) en esas categorías
-            # Contamos cuántas veces aparece cada producto en OrderItems de órdenes pagadas
-            popular_products_query = Product.objects.filter(
+            # 3. Encontrar los productos mejor calificados (por rating) en esas categorías
+            # Calculamos el rating promedio de las reseñas de cada producto
+            best_rated_products_query = Product.objects.filter(
                 category__name__in=complementary_category_names  # Productos en categorías complementarias
             ).exclude(
                 id=product_id  # Excluir el producto actual
             ).annotate(
-                # Contar cuántas veces se vendió (en órdenes pagadas)
-                sales_count=Count(
-                    'orderitem',
-                    filter=Q(orderitem__order__payment_status='pagado')
-                )
+                # Calcular el rating promedio de todas las reseñas
+                average_rating=Avg('reviews__rating'),
+                # Contar reseñas para asegurar que la calificación sea confiable
+                reviews_count=Count('reviews')
             ).filter(
-                sales_count__gt=0  # Solo productos que se hayan vendido al menos una vez
+                # Filtrar: solo productos con al menos 1 reseña
+                reviews_count__gt=0,
+                average_rating__isnull=False  # Asegurar que tienen rating
             ).select_related(
                 'brand', 'category'  # Optimizar carga de relaciones
             ).order_by(
-                '-sales_count'  # Ordenar por más vendidos primero
+                '-average_rating',  # Ordenar por mejor rating primero
+                '-reviews_count'     # Desempate: más reseñas = más confiable
             )
             
-            # 4. Limitar a los N más vendidos
-            recommended_products = list(popular_products_query[:self.MAX_RECOMMENDATIONS])
+            # 4. Limitar a los N mejor calificados
+            recommended_products = list(best_rated_products_query[:self.MAX_RECOMMENDATIONS])
             
             logger.info(
-                f"Encontrados {len(recommended_products)} productos complementarios populares "
+                f"Encontrados {len(recommended_products)} productos complementarios mejor calificados "
                 f"para '{current_category_name}'."
             )
             
