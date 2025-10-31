@@ -67,3 +67,9 @@ coverage.xml
 # Testing scripts and temporary files
 _testing_scripts/
 *.txt
+test_*.xlsx
+update_*.sql
+
+# Database backups
+_backups/
+*backup*.sql
