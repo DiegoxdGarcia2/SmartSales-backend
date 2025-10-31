@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm 1cm;
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 9pt;
+                color: #777;
+            }
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 10pt;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 9pt;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #4F81BD;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .timestamp {
+            text-align: right;
+            color: #777;
+            font-size: 9pt;
+            margin-bottom: 10px;
+        }
+        .prompt {
+            font-style: italic;
+            color: #555;
+            font-size: 9pt;
+            border-left: 3px solid #ccc;
+            padding-left: 10px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="timestamp">
+        Generado el: {{ timestamp|date:"d/m/Y H:i:s" }}
+    </div>
+    <h1>{{ title }}</h1>
+    
+    <p class="prompt">
+        <strong>Prompt:</strong> "{{ original_prompt }}"
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                {% for header in headers %}
+                    <th>{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if not data %}
+            <tr>
+                <td colspan="{{ headers|length }}" style="text-align: center;">No se encontraron datos para este reporte.</td>
+            </tr>
+            {% endif %}
+            {% for row_dict in data %}
+            <tr>
+                {% for value in row_dict.values %}
+                <td>
+                    {% if value is None %}
+                        N/A
+                    {% elif value.year %}
+                        {% comment %} Detecta datetime/date por atributo year {% endcomment %}
+                        {% if value.hour is not None %}
+                            {{ value|date:"d/m/Y H:i" }}
+                        {% else %}
+                            {{ value|date:"d/m/Y" }}
+                        {% endif %}
+                    {% else %}
+                        {{ value }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
