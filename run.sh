@@ -6,6 +6,9 @@ set -e
 echo "🔄 Aplicando migraciones de base de datos..."
 python manage.py migrate --noinput
 
+echo "🧠 Analizando sentimiento de reseñas..."
+python manage.py analyze_existing_sentiments || echo "⚠️ Warning: Sentiment analysis failed or no reviews to analyze"
+
 echo "📦 Recolectando archivos estáticos..."
 python manage.py collectstatic --noinput
 
