@@ -167,6 +167,29 @@ class Review(models.Model):
         null=True,
         verbose_name='Comentario'
     )
+    
+    # Campos de Análisis de Sentimiento
+    SENTIMENT_CHOICES = [
+        ('POSITIVO', 'Positivo'),
+        ('NEUTRO', 'Neutro'),
+        ('NEGATIVO', 'Negativo'),
+    ]
+    
+    sentiment = models.CharField(
+        max_length=10,
+        choices=SENTIMENT_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='Sentimiento',
+        db_index=True  # Índice para filtrado por sentimiento
+    )
+    sentiment_score = models.FloatField(
+        blank=True,
+        null=True,
+        verbose_name='Puntuación de Sentimiento',
+        help_text='Puntuación compuesta VADER (-1 a 1)'
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Fecha de creación',

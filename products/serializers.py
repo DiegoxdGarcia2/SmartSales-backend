@@ -100,11 +100,14 @@ class ProductSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     """
     Serializer para el modelo Review.
+    Incluye análisis automático de sentimiento.
     """
     # Mostrar el username en lugar del ID
     user = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Review
-        fields = ['id', 'product', 'user', 'rating', 'comment', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+        fields = ['id', 'product', 'user', 'rating', 'comment', 'created_at', 'updated_at',
+                  'sentiment', 'sentiment_score']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at',
+                            'sentiment', 'sentiment_score']

@@ -1,11 +1,69 @@
+import logging
 from rest_framework import viewsets, permissions, serializers as drf_serializers
 from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.exceptions import PermissionDenied
 from django.db import IntegrityError
 from django.db.models import Prefetch
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from .models import Category, Product, Brand, Review
 from .serializers import CategorySerializer, ProductSerializer, BrandSerializer, ReviewSerializer
 from .permissions import HasPurchasedProduct, IsReviewAuthorOrReadOnly
+
+# Configurar logger
+logger = logging.getLogger(__name__)
+
+
+def analyze_review_sentiment(rating, comment):
+    """
+    Analiza el sentimiento de una reseña basándose en el rating y el comentario.
+    
+    Args:
+        rating (int): Calificación numérica de 1 a 5
+        comment (str): Comentario textual de la reseña
+        
+    Returns:
+        tuple: (sentiment, score) donde sentiment es 'POSITIVO', 'NEUTRO' o 'NEGATIVO'
+               y score es la puntuación compound de VADER (-1 a 1)
+    """
+    # Regla base: clasificar por rating
+    if rating >= 4:
+        sentiment = 'POSITIVO'
+    elif rating == 3:
+        sentiment = 'NEUTRO'
+    else:
+        sentiment = 'NEGATIVO'
+    
+    score = 0.0
+
+    # Refinar análisis con el texto del comentario (si existe)
+    if comment and comment.strip():
+        try:
+            analyzer = SentimentIntensityAnalyzer()
+            # Analizar el texto del comentario
+            vs = analyzer.polarity_scores(comment)
+            score = vs['compound']  # Puntuación compuesta (-1 a 1)
+
+            # Ajustar sentimiento si el comentario contradice el rating
+            # Ejemplo: Rating 5 pero comentario muy negativo -> ajustar a NEUTRO
+            if score > 0.05 and sentiment == 'NEGATIVO':
+                # Comentario positivo pero rating bajo
+                sentiment = 'NEUTRO'
+                logger.info(f"Ajuste: Rating bajo ({rating}) pero comentario positivo (score: {score:.2f})")
+            elif score < -0.05 and sentiment == 'POSITIVO':
+                # Comentario negativo pero rating alto
+                sentiment = 'NEUTRO'
+                logger.info(f"Ajuste: Rating alto ({rating}) pero comentario negativo (score: {score:.2f})")
+            elif score > 0.05:
+                sentiment = 'POSITIVO'
+            elif score < -0.05:
+                sentiment = 'NEGATIVO'
+                
+        except Exception as e:
+            # Si falla el análisis VADER, mantener el sentimiento basado en rating
+            logger.error(f"Error en análisis de sentimiento VADER: {e}", exc_info=True)
+            # score se mantiene en 0.0
+
+    return sentiment, score
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -98,7 +156,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Asigna el usuario automáticamente y valida que haya comprado el producto
+        Asigna el usuario automáticamente, valida que haya comprado el producto
+        y analiza automáticamente el sentimiento de la reseña.
         """
         user = self.request.user
         product = serializer.validated_data['product']  # Obtener instancia del producto
@@ -113,15 +172,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
             # Usar ValidationError que el frontend puede interpretar mejor como 400
             raise drf_serializers.ValidationError({'detail': 'Ya has dejado una reseña para este producto.'})
 
-        # 3. Intentar guardar y manejar error de BD si ocurre (poco probable si la validación anterior funciona)
+        # 3. Analizar sentimiento de la reseña
+        rating = serializer.validated_data['rating']
+        comment = serializer.validated_data.get('comment', '')
+        sentiment, sentiment_score = analyze_review_sentiment(rating, comment)
+        
+        logger.info(f"Nueva reseña - Producto: {product.id}, Rating: {rating}, Sentimiento: {sentiment} ({sentiment_score:.2f})")
+
+        # 4. Intentar guardar con usuario y sentimiento
         try:
-            serializer.save(user=user)
+            serializer.save(user=user, sentiment=sentiment, sentiment_score=sentiment_score)
         except IntegrityError:
             # Esto captura el error si la validación anterior fallara por alguna razón (ej. condición de carrera)
             raise drf_serializers.ValidationError({'detail': 'Error de integridad, posible reseña duplicada.'})
         except Exception as e:
             # Capturar otros posibles errores durante el save
-            # Considera loggear el error real 'e' aquí para depuración
+            logger.error(f"Error al guardar reseña: {e}", exc_info=True)
             raise drf_serializers.ValidationError({'detail': f'Ocurrió un error inesperado al guardar la reseña: {str(e)}'})
 
     def get_permissions(self):
