@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import random
+from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,9 +10,11 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticatedOrReadOnly
 from django.conf import settings
 from django.db.models import F, Sum, Count, Q, Avg
 from django.db.models.functions import TruncMonth
-from orders.models import OrderItem
+from django.utils import timezone
+from orders.models import Order, OrderItem
 from products.models import Category, Product
 from products.serializers import ProductSerializer
+from users.models import User, Role
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -370,5 +373,80 @@ class ComplementaryCategoryRecsView(APIView):
             )
             return Response(
                 {"detail": "Error al generar recomendaciones."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DashboardKpiView(APIView):
+    """
+    Vista para obtener KPIs clave del dashboard administrativo.
+    Calcula métricas importantes como total de clientes, órdenes pagadas,
+    ticket promedio, ingresos totales, y productos más vendidos.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, format=None):
+        """
+        Retorna KPIs calculados para el dashboard del admin.
+        """
+        logger.info('Calculando KPIs del Dashboard...')
+        
+        try:
+            # 1. Total Clientes (rol CLIENTE)
+            total_customers = User.objects.filter(role__name='CLIENTE').count()
+            
+            # 2. Órdenes Pagadas (filtramos por status='PAGADO')
+            orders_pagadas = Order.objects.filter(status='PAGADO')
+            total_orders_paid = orders_pagadas.count()
+            
+            # 3. Ticket Promedio (Valor Promedio de Orden Pagada)
+            average_order_value = orders_pagadas.aggregate(
+                avg_total=Avg('total_price')
+            )['avg_total'] or 0
+            
+            # 4. Total Ingresos (Suma de todas las órdenes pagadas)
+            total_revenue = orders_pagadas.aggregate(
+                total_sum=Sum('total_price')
+            )['total_sum'] or 0
+            
+            # 5. Órdenes en los últimos 30 días
+            thirty_days_ago = timezone.now() - timedelta(days=30)
+            recent_orders_count = orders_pagadas.filter(created_at__gte=thirty_days_ago).count()
+            
+            # 6. Productos Más Vendidos (Top 3 por cantidad)
+            top_products_data = OrderItem.objects.filter(
+                order__status='PAGADO'
+            ).values(
+                'product__name'  # Agrupar por nombre del producto
+            ).annotate(
+                total_sold=Sum('quantity')  # Sumar cantidades vendidas
+            ).order_by('-total_sold')[:3]  # Top 3
+            
+            # Convertir QuerySet a lista de diccionarios
+            top_products = [
+                {
+                    'product_name': item['product__name'],
+                    'total_sold': item['total_sold']
+                }
+                for item in top_products_data
+            ]
+            
+            # Preparar respuesta con todos los KPIs
+            kpis = {
+                'total_customers': total_customers,
+                'total_orders_paid': total_orders_paid,
+                'average_order_value': float(average_order_value),
+                'total_revenue': float(total_revenue),
+                'recent_orders_count': recent_orders_count,
+                'top_selling_products': top_products,
+            }
+            
+            logger.info(f"KPIs calculados exitosamente: {kpis}")
+            return Response(kpis, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error al calcular KPIs: {e}", exc_info=True)
+            return Response(
+                {"detail": "Error al calcular KPIs."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
