@@ -37,19 +37,23 @@ def build_report_query(options: dict):
     if module == 'ventas':
         queryset = OrderItem.objects.filter(order__status='PAGADO')  # Base
         
-        # Aplicar Filtros de Fecha (al campo 'created_at' de la Orden)
-        if start_date and end_date:
-            queryset = queryset.filter(order__created_at__range=(start_date, end_date))
-        
-        # Aplicar Filtros de Texto (con __icontains para ser flexible)
+        # --- APLICAR FILTROS PRIMERO (antes de agrupación) ---
         q_filters = Q()
+        
+        # Filtros de Fecha
+        if start_date and end_date:
+            q_filters &= Q(order__created_at__range=(start_date, end_date))
+        
+        # Filtros de Texto
         if 'brand_name' in filters:
             q_filters &= Q(product__brand__name__icontains=filters['brand_name'])
         if 'category_name' in filters:
             q_filters &= Q(product__category__name__icontains=filters['category_name'])
         if 'user_username' in filters:
             q_filters &= Q(order__user__username__icontains=filters['user_username'])
+        
         queryset = queryset.filter(q_filters)
+        # --- FIN FILTROS ---
 
         # Aplicar Agrupación
         if group_by == 'mes':
@@ -109,15 +113,21 @@ def build_report_query(options: dict):
     elif module == 'productos':
         queryset = Product.objects.all()
         
-        if start_date and end_date:  # Filtrar por fecha de creación del producto
-            queryset = queryset.filter(created_at__range=(start_date, end_date))
-        
+        # --- APLICAR FILTROS PRIMERO (antes de agrupación) ---
         q_filters = Q()
+        
+        # Filtros de Fecha (fecha de creación del producto)
+        if start_date and end_date:
+            q_filters &= Q(created_at__range=(start_date, end_date))
+        
+        # Filtros de Texto
         if 'brand_name' in filters:
             q_filters &= Q(brand__name__icontains=filters['brand_name'])
         if 'category_name' in filters:
             q_filters &= Q(category__name__icontains=filters['category_name'])
+        
         queryset = queryset.filter(q_filters)
+        # --- FIN FILTROS ---
 
         if group_by == 'brand':
             queryset = queryset.values('brand__name').annotate(
@@ -161,17 +171,23 @@ def build_report_query(options: dict):
     elif module == 'reseñas':
         queryset = Review.objects.all()
 
-        if start_date and end_date:
-            queryset = queryset.filter(created_at__range=(start_date, end_date))
-
+        # --- APLICAR FILTROS PRIMERO (antes de agrupación) ---
         q_filters = Q()
+        
+        # Filtros de Fecha
+        if start_date and end_date:
+            q_filters &= Q(created_at__range=(start_date, end_date))
+
+        # Filtros de Texto
         if 'brand_name' in filters:
             q_filters &= Q(product__brand__name__icontains=filters['brand_name'])
         if 'category_name' in filters:
             q_filters &= Q(product__category__name__icontains=filters['category_name'])
         if 'user_username' in filters:
             q_filters &= Q(user__username__icontains=filters['user_username'])
+        
         queryset = queryset.filter(q_filters)
+        # --- FIN FILTROS ---
         
         if group_by == 'product':
             queryset = queryset.values('product__name').annotate(
