@@ -8,10 +8,14 @@ ENV PYTHONUNBUFFERED=1
 # Crear y establecer directorio de trabajo
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias para PostgreSQL y compilación
-RUN apt-get update && apt-get install -y \
+# Instalar dependencias del sistema necesarias para PostgreSQL, compilación y WeasyPrint (PDFs)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar dependencias de Python
