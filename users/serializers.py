@@ -46,41 +46,53 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         """
         Valida las credenciales permitiendo login con username o email.
+        Optimizado para minimizar consultas a la base de datos.
         """
         # Obtener las credenciales
         username_or_email = attrs.get('username')
         password = attrs.get('password')
         
-        # Primer intento: autenticar con username
-        user = authenticate(
-            request=self.context.get('request'),
-            username=username_or_email,
-            password=password
-        )
+        # Optimización: Detectar si es email o username por el formato
+        # y hacer una sola consulta directa
+        user_obj = None
         
-        # Segundo intento: si falla, intentar con email
-        if user is None:
+        if '@' in username_or_email:
+            # Es probable que sea un email
             try:
-                # Buscar usuario por email
-                user_obj = User.objects.get(email=username_or_email)
-                # Intentar autenticar con el username del usuario encontrado
-                user = authenticate(
-                    request=self.context.get('request'),
-                    username=user_obj.username,
-                    password=password
-                )
+                # Buscar por email con select_related para cargar el rol
+                user_obj = User.objects.select_related('role').get(email=username_or_email)
             except User.DoesNotExist:
-                user = None
+                pass
+        else:
+            # Es probable que sea un username
+            try:
+                # Buscar por username con select_related para cargar el rol
+                user_obj = User.objects.select_related('role').get(username=username_or_email)
+            except User.DoesNotExist:
+                pass
         
-        # Si ambos intentos fallaron, lanzar error
-        if user is None:
+        # Si no se encontró el usuario, lanzar error
+        if user_obj is None:
             raise AuthenticationFailed(
                 'No se encontró ninguna cuenta activa con las credenciales proporcionadas.'
             )
         
-        # Si el usuario está inactivo
-        if not user.is_active:
+        # Verificar que el usuario esté activo antes de intentar autenticar
+        if not user_obj.is_active:
             raise AuthenticationFailed('Esta cuenta está desactivada.')
+        
+        # Autenticar con el username del usuario encontrado
+        user = authenticate(
+            request=self.context.get('request'),
+            username=user_obj.username,
+            password=password
+        )
+        
+        # Si la autenticación falló (contraseña incorrecta)
+        if user is None:
+            raise AuthenticationFailed(
+                'Contraseña incorrecta.'
+            )
         
         # Actualizar attrs con el username correcto para que el padre lo procese
         attrs['username'] = user.username
@@ -89,11 +101,12 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         
         # Añadir información adicional al response (opcional)
+        # Usar user_obj que ya tiene el rol cargado con select_related
         data['user'] = {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'role': user.role.name if user.role else None,
+            'id': user_obj.id,
+            'username': user_obj.username,
+            'email': user_obj.email,
+            'role': user_obj.role.name if user_obj.role else None,
         }
         
         return data

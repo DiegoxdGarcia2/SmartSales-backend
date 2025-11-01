@@ -31,6 +31,10 @@ class Role(models.Model):
         verbose_name = 'Rol'
         verbose_name_plural = 'Roles'
         ordering = ['name']
+        indexes = [
+            # Índice para búsqueda rápida por nombre (usado en validaciones y filtros)
+            models.Index(fields=['name'], name='role_name_idx'),
+        ]
     
     def __str__(self):
         return self.name
@@ -53,6 +57,16 @@ class User(AbstractUser):
     class Meta:
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
+        indexes = [
+            # Índice para búsqueda rápida por username (login principal)
+            models.Index(fields=['username'], name='user_username_idx'),
+            # Índice para búsqueda rápida por email (login alternativo)
+            models.Index(fields=['email'], name='user_email_idx'),
+            # Índice para filtrado por is_active (usuarios activos)
+            models.Index(fields=['is_active'], name='user_is_active_idx'),
+            # Índice compuesto para búsqueda de usuarios activos por rol
+            models.Index(fields=['role', 'is_active'], name='user_role_active_idx'),
+        ]
     
     def __str__(self):
         role_name = self.role.name if self.role else 'Sin rol'
@@ -99,6 +113,11 @@ class ClientProfile(models.Model):
         verbose_name = 'Perfil de Cliente'
         verbose_name_plural = 'Perfiles de Clientes'
         ordering = ['-created_at']
+        indexes = [
+            # Índice para ordenamiento por fecha de creación
+            models.Index(fields=['-created_at'], name='clientprofile_created_idx'),
+            # Índice para búsqueda por usuario (relación OneToOne ya tiene índice único)
+        ]
     
     def __str__(self):
         return self.user.username
