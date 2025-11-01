@@ -13,6 +13,60 @@ from .generators import generate_excel_report, generate_pdf_report
 logger = logging.getLogger(__name__)
 
 
+def generate_report_title(options: dict) -> str:
+    """
+    Genera un título descriptivo para el reporte basado en las opciones.
+    
+    Args:
+        options: Diccionario con opciones del reporte
+    
+    Returns:
+        str: Título descriptivo del reporte
+    """
+    module = options.get('module', 'General').capitalize()
+    parts = [f"Reporte de {module}"]
+    
+    # Agregar filtros al título
+    filters = options.get('filters', {})
+    if filters.get('brand_name'):
+        parts.append(f"Marca {filters['brand_name']}")
+    if filters.get('category_name'):
+        parts.append(f"Categoria {filters['category_name']}")
+    if filters.get('user_username'):
+        parts.append(f"Cliente {filters['user_username']}")
+    
+    # Agregar rango de fechas
+    start_date = options.get('start_date')
+    end_date = options.get('end_date')
+    if start_date and end_date:
+        # Formatear fechas
+        start_str = start_date.strftime('%d-%m-%Y')
+        end_str = end_date.strftime('%d-%m-%Y')
+        
+        # Si es el mismo día, mostrar solo una fecha
+        if start_date.date() == end_date.date():
+            parts.append(start_str)
+        # Si es el mismo mes y año, mostrar rango simplificado
+        elif start_date.month == end_date.month and start_date.year == end_date.year:
+            parts.append(f"{start_date.strftime('%B %Y')}")
+        else:
+            parts.append(f"{start_str} a {end_str}")
+    
+    # Agregar agrupación
+    group_by = options.get('group_by')
+    if group_by:
+        group_name = {
+            'category': 'por Categoría',
+            'brand': 'por Marca',
+            'product': 'por Producto',
+            'user': 'por Cliente',
+            'mes': 'por Mes'
+        }.get(group_by, f'por {group_by}')
+        parts.append(group_name)
+    
+    return ' - '.join(parts)
+
+
 class DynamicReportAPIView(APIView):
     """
     API View para generar reportes dinámicos basados en un prompt de texto o opciones estructuradas.
@@ -123,9 +177,10 @@ class DynamicReportAPIView(APIView):
                 status=status.HTTP_200_OK  # No es un error, solo no hay datos
             )
 
-        # 3. Generar el archivo
-        title = f"Reporte de {options.get('module', 'General').capitalize()} ({timezone.now().strftime('%Y-%m-%d')})"
+        # 3. Generar título descriptivo
+        title = generate_report_title(options)
         
+        # 4. Generar el archivo
         try:
             if options.get('format') == 'excel':
                 logger.info("Generando reporte Excel...")

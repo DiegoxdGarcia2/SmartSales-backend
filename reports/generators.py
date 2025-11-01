@@ -107,15 +107,25 @@ def generate_excel_report(queryset, headers: list, title: str):
     
     logger.info(f"Excel generado: {title} con {len(data_rows)} filas.")
 
-    # --- Guardar en Buffer de Memoria y crear HttpResponse ---
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    )
-    timestamp_file = timezone.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"Reporte_{title.replace(' ', '_')}_{timestamp_file}.xlsx"
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    # --- Guardar en Buffer de Memoria ---
+    output = io.BytesIO()
+    workbook.save(output)
+    output.seek(0)
     
-    workbook.save(response)
+    # --- Crear HttpResponse con headers correctos ---
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    timestamp_file = timezone.now().strftime('%Y%m%d_%H%M%S')
+    # Limpiar título para nombre de archivo (sin caracteres especiales)
+    safe_title = title.replace(' ', '_').replace('/', '-').replace('\\', '-')
+    filename = f"{safe_title}_{timestamp_file}.xlsx"
+    
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Length'] = output.tell()
+    
     return response
 
 
@@ -170,10 +180,15 @@ def generate_pdf_report(queryset, headers: list, title: str, original_prompt: st
             content_type="text/plain"
         )
 
-    # --- Crear HttpResponse ---
+    # --- Crear HttpResponse con headers correctos ---
     response = HttpResponse(pdf_file, content_type='application/pdf')
+    
     timestamp_file = timezone.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"Reporte_{title.replace(' ', '_')}_{timestamp_file}.pdf"
+    # Limpiar título para nombre de archivo
+    safe_title = title.replace(' ', '_').replace('/', '-').replace('\\', '-')
+    filename = f"{safe_title}_{timestamp_file}.pdf"
+    
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Length'] = len(pdf_file)
     
     return response

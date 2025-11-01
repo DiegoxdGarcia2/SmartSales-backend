@@ -74,8 +74,40 @@ def _parse_dates(text, now):
     """
     Parsea expresiones de fechas del texto.
     Retorna tupla (start_date, end_date) o (None, None).
+    
+    También soporta rangos explícitos con 'del X al Y' o 'desde X hasta Y'
+    donde X e Y pueden ser fechas en formato natural o ISO.
     """
     try:
+        # Intentar parsear rango explícito: "del 01/01/2024 al 31/03/2024" o "desde X hasta Y"
+        range_pattern = re.compile(
+            r'(del|desde)\s+(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})\s+(al|hasta)\s+(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{2}-\d{2})',
+            re.IGNORECASE
+        )
+        if (match := range_pattern.search(text)):
+            try:
+                start_str = match.group(2)
+                end_str = match.group(4)
+                
+                # Parsear con dateutil (acepta múltiples formatos)
+                start_date = date_parse(start_str, dayfirst=True)
+                end_date = date_parse(end_str, dayfirst=True)
+                
+                # Asegurar que sean timezone-aware
+                if timezone.is_naive(start_date):
+                    start_date = timezone.make_aware(start_date)
+                if timezone.is_naive(end_date):
+                    end_date = timezone.make_aware(end_date)
+                
+                # Ajustar horas
+                start_date = start_date.replace(hour=0, minute=0, second=0)
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+                
+                logger.debug(f"Fecha parseada: Rango explícito ({start_date} a {end_date})")
+                return start_date, end_date
+            except Exception as e:
+                logger.warning(f"Error parseando rango de fechas explícito: {e}")
+        
         # Últimos X días
         if (match := LAST_X_DAYS_REGEX.search(text)):
             days = _get_number(match.group(1))
