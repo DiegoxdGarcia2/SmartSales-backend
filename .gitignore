@@ -73,3 +73,8 @@ update_*.sql
 # Database backups
 _backups/
 *backup*.sql
+
+# Reportes generados (archivos temporales de prueba)
+reportes_generados/
+*.xlsx
+*.pdf

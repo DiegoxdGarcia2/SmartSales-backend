@@ -88,20 +88,7 @@
             {% for row_dict in data %}
             <tr>
                 {% for value in row_dict.values %}
-                <td>
-                    {% if value is None %}
-                        N/A
-                    {% elif value.year %}
-                        {% comment %} Detecta datetime/date por atributo year {% endcomment %}
-                        {% if value.hour is not None %}
-                            {{ value|date:"d/m/Y H:i" }}
-                        {% else %}
-                            {{ value|date:"d/m/Y" }}
-                        {% endif %}
-                    {% else %}
-                        {{ value }}
-                    {% endif %}
-                </td>
+                <td>{{ value }}</td>
                 {% endfor %}
             </tr>
             {% endfor %}

@@ -85,7 +85,15 @@ def generate_excel_report(queryset, headers: list, title: str):
             
             # Formatear tipos de datos comunes
             if isinstance(cell_value, datetime.datetime):
-                cell_value = cell_value.astimezone(timezone.get_current_timezone()).strftime('%Y-%m-%d %H:%M')
+                # Manejar timezone-aware y naive datetimes
+                try:
+                    if timezone.is_aware(cell_value):
+                        cell_value = cell_value.astimezone(timezone.get_current_timezone()).strftime('%Y-%m-%d %H:%M')
+                    else:
+                        cell_value = cell_value.strftime('%Y-%m-%d %H:%M')
+                except Exception as e:
+                    # Fallback: usar formato ISO
+                    cell_value = str(cell_value)
                 cell.alignment = Alignment(horizontal="center")
             elif isinstance(cell_value, datetime.date):
                 cell_value = cell_value.strftime('%Y-%m-%d')
@@ -97,6 +105,9 @@ def generate_excel_report(queryset, headers: list, title: str):
             elif isinstance(cell_value, (int, float)):
                 cell.number_format = '#,##0'
                 cell.alignment = Alignment(horizontal="right")
+            elif cell_value is None:
+                cell_value = ""
+                cell.alignment = Alignment(horizontal="center")
             else:
                 cell.alignment = Alignment(horizontal="left")
             
@@ -157,12 +168,38 @@ def generate_pdf_report(queryset, headers: list, title: str, original_prompt: st
     
     # Convertir queryset a lista de diccionarios (ya debería serlo, pero por si acaso)
     data_list = list(queryset)
+    
+    # Formatear datos para el PDF (convertir datetime, Decimal, etc a strings legibles)
+    formatted_data = []
+    for row_dict in data_list:
+        formatted_row = {}
+        for key, value in row_dict.items():
+            if isinstance(value, datetime.datetime):
+                # Manejar timezone-aware y naive datetimes
+                try:
+                    if timezone.is_aware(value):
+                        formatted_row[key] = value.astimezone(timezone.get_current_timezone()).strftime('%d/%m/%Y %H:%M')
+                    else:
+                        formatted_row[key] = value.strftime('%d/%m/%Y %H:%M')
+                except Exception:
+                    formatted_row[key] = str(value)
+            elif isinstance(value, datetime.date):
+                formatted_row[key] = value.strftime('%d/%m/%Y')
+            elif isinstance(value, Decimal):
+                formatted_row[key] = f"{value:,.2f}"
+            elif isinstance(value, (int, float)):
+                formatted_row[key] = f"{value:,}"
+            elif value is None:
+                formatted_row[key] = "N/A"
+            else:
+                formatted_row[key] = str(value)
+        formatted_data.append(formatted_row)
 
     # Renderizar el template HTML a una string
     context = {
         'title': title,
         'headers': headers,
-        'data': data_list,
+        'data': formatted_data,
         'timestamp': timezone.now(),
         'original_prompt': original_prompt
     }

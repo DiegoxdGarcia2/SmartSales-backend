@@ -119,6 +119,25 @@ class DynamicReportAPIView(APIView):
             # --- Ruta 1: Opciones Estructuradas (Nueva UI) ---
             logger.info(f"Recibida solicitud de reporte estructurado: {options_structured}")
             options = options_structured
+            
+            # Normalizar group_by (aceptar "categoria", "category", "categoría")
+            if 'group_by' in options:
+                group_by = options['group_by'].lower() if options['group_by'] else None
+                if group_by in ['categoria', 'categoría']:
+                    options['group_by'] = 'category'
+                elif group_by == 'cliente':
+                    options['group_by'] = 'user'
+                elif group_by == 'producto':
+                    options['group_by'] = 'product'
+            
+            # Normalizar module (aceptar "reseñas", "reseñas", "reviews")
+            if 'module' in options:
+                module = options['module'].lower() if options['module'] else None
+                if module in ['reseñas', 'reviews']:
+                    options['module'] = 'reseñas'
+                elif module in ['pedidos', 'orders']:
+                    options['module'] = 'ventas'
+            
             # Añadir prompt por defecto si no existe
             if 'original_prompt' not in options:
                 options['original_prompt'] = 'Reporte estructurado'
