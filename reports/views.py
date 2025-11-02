@@ -120,6 +120,38 @@ class DynamicReportAPIView(APIView):
             logger.info(f"Recibida solicitud de reporte estructurado: {options_structured}")
             options = options_structured
             
+            # 🔧 FIX: Parsear fechas si vienen como strings
+            from dateutil.parser import parse as date_parse
+            if 'start_date' in options and isinstance(options['start_date'], str):
+                try:
+                    parsed_date = date_parse(options['start_date'])
+                    # Asegurar timezone-aware
+                    if timezone.is_naive(parsed_date):
+                        parsed_date = timezone.make_aware(parsed_date)
+                    options['start_date'] = parsed_date.replace(hour=0, minute=0, second=0)
+                    logger.debug(f"Fecha inicio parseada: {options['start_date']}")
+                except Exception as e:
+                    logger.error(f"Error parseando start_date '{options['start_date']}': {e}")
+                    return Response(
+                        {"error": f"Formato de start_date inválido: {options['start_date']}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            if 'end_date' in options and isinstance(options['end_date'], str):
+                try:
+                    parsed_date = date_parse(options['end_date'])
+                    # Asegurar timezone-aware
+                    if timezone.is_naive(parsed_date):
+                        parsed_date = timezone.make_aware(parsed_date)
+                    options['end_date'] = parsed_date.replace(hour=23, minute=59, second=59)
+                    logger.debug(f"Fecha fin parseada: {options['end_date']}")
+                except Exception as e:
+                    logger.error(f"Error parseando end_date '{options['end_date']}': {e}")
+                    return Response(
+                        {"error": f"Formato de end_date inválido: {options['end_date']}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
             # Normalizar group_by (aceptar "categoria", "category", "categoría")
             if 'group_by' in options:
                 group_by = options['group_by'].lower() if options['group_by'] else None
