@@ -231,9 +231,7 @@ def parse_report_prompt(prompt_text: str):
     # 1. Parsear Formato de Salida
     if (match := FORMAT_REGEX.search(text)):
         options['format'] = match.group(1).lower()
-        # Convertir csv a excel (mismo generador)
-        if options['format'] == 'csv':
-            options['format'] = 'excel'
+        # ✅ Mantener CSV como formato independiente (ya no se convierte a excel)
         logger.debug(f"Formato detectado: {options['format']}")
     
     # 2. Parsear Módulo del Reporte

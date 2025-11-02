@@ -8,7 +8,7 @@ from django.utils import timezone
 # Importar nuestros módulos de reportes
 from .parser import parse_report_prompt
 from .query_builder import build_report_query
-from .generators import generate_excel_report, generate_pdf_report
+from .generators import generate_excel_report, generate_pdf_report, generate_csv_report
 
 logger = logging.getLogger(__name__)
 
@@ -187,14 +187,92 @@ class DynamicReportAPIView(APIView):
         
         if not queryset.exists():
             logger.info(f"Reporte para '{prompt_text}' no arrojó resultados.")
-            # Devolvemos 200 OK con mensaje, o un reporte vacío
+            
+            # 🔧 FIX: Retornar archivo vacío según el formato solicitado (NO JSON)
             if options['format'] == 'json':
-                return Response([], status=status.HTTP_200_OK)  # JSON vacío
-            # Podríamos generar PDF/Excel vacíos si quisiéramos, pero un 200 con mensaje es más claro
-            return Response(
-                {"message": "La consulta no arrojó resultados."},
-                status=status.HTTP_200_OK  # No es un error, solo no hay datos
-            )
+                return Response([], status=status.HTTP_200_OK)
+            
+            elif options['format'] == 'csv':
+                # Generar CSV vacío con mensaje
+                import io
+                import csv
+                output = io.StringIO()
+                writer = csv.writer(output)
+                writer.writerow(['Mensaje'])
+                writer.writerow(['No se encontraron resultados para los filtros especificados'])
+                
+                response = HttpResponse(
+                    output.getvalue(),
+                    content_type='text/csv; charset=utf-8-sig'
+                )
+                response['Content-Disposition'] = 'attachment; filename="sin_resultados.csv"'
+                logger.info("Retornando CSV vacío (sin resultados)")
+                return response
+            
+            elif options['format'] == 'excel':
+                # Generar Excel vacío con mensaje
+                import io
+                import openpyxl
+                workbook = openpyxl.Workbook()
+                sheet = workbook.active
+                sheet.title = "Sin Resultados"
+                sheet['A1'] = "No se encontraron resultados para los filtros especificados"
+                
+                output = io.BytesIO()
+                workbook.save(output)
+                output.seek(0)
+                
+                response = HttpResponse(
+                    output.read(),
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                response['Content-Disposition'] = 'attachment; filename="sin_resultados.xlsx"'
+                logger.info("Retornando Excel vacío (sin resultados)")
+                return response
+            
+            elif options['format'] == 'pdf':
+                # Generar PDF vacío con mensaje
+                from django.http import HttpResponse
+                html_content = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; text-align: center; }
+                        h1 { color: #666; }
+                        p { color: #999; }
+                    </style>
+                </head>
+                <body>
+                    <h1>No se encontraron resultados</h1>
+                    <p>Los filtros especificados no arrojaron datos.</p>
+                </body>
+                </html>
+                """
+                
+                try:
+                    from weasyprint import HTML
+                    pdf_file = HTML(string=html_content).write_pdf()
+                    response = HttpResponse(pdf_file, content_type='application/pdf')
+                    response['Content-Disposition'] = 'attachment; filename="sin_resultados.pdf"'
+                    logger.info("Retornando PDF vacío (sin resultados)")
+                    return response
+                except ImportError:
+                    # Fallback si WeasyPrint no está disponible
+                    response = HttpResponse(
+                        "No se encontraron resultados para los filtros especificados.",
+                        content_type='text/plain'
+                    )
+                    logger.warning("WeasyPrint no disponible, retornando texto plano")
+                    return response
+            
+            else:
+                # Fallback por si hay otro formato
+                return Response(
+                    {"message": "La consulta no arrojó resultados."},
+                    status=status.HTTP_200_OK
+                )
 
         # 3. Generar título descriptivo
         title = generate_report_title(options)
@@ -204,6 +282,10 @@ class DynamicReportAPIView(APIView):
             if options.get('format') == 'excel':
                 logger.info("Generando reporte Excel...")
                 return generate_excel_report(queryset, headers, title)
+            
+            elif options.get('format') == 'csv':
+                logger.info("Generando reporte CSV...")
+                return generate_csv_report(queryset, headers, title)
             
             elif options.get('format') == 'pdf':
                 logger.info("Generando reporte PDF...")

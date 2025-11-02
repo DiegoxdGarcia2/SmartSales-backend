@@ -209,6 +209,13 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
+# 🔧 Exponer headers para descarga de archivos
+CORS_EXPOSE_HEADERS = [
+    'content-disposition',
+    'content-type',
+    'content-length',
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
 # Security Settings for Production

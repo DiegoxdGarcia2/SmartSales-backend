@@ -1,4 +1,5 @@
 import io
+import csv
 import logging
 import openpyxl
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
@@ -227,5 +228,71 @@ def generate_pdf_report(queryset, headers: list, title: str, original_prompt: st
     
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     response['Content-Length'] = len(pdf_file)
+    
+    return response
+
+
+def generate_csv_report(queryset, headers: list, title: str):
+    """
+    Genera un archivo CSV en memoria a partir de un queryset (.values()) y headers.
+    Devuelve un objeto HttpResponse listo para ser enviado.
+    
+    Args:
+        queryset: QuerySet de Django (resultado de .values())
+        headers (list): Lista de strings con nombres de columnas
+        title (str): Título del reporte (usado en el nombre del archivo)
+    
+    Returns:
+        HttpResponse: Respuesta HTTP con el archivo CSV adjunto
+    """
+    # Crear buffer de memoria
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Escribir headers
+    writer.writerow(headers)
+    
+    # Convertir queryset a lista de diccionarios
+    data_list = list(queryset)
+    
+    # Escribir datos
+    for row_dict in data_list:
+        formatted_row = []
+        for value in row_dict.values():
+            # Formatear tipos de datos comunes
+            if isinstance(value, datetime.datetime):
+                # Manejar timezone-aware y naive datetimes
+                try:
+                    if timezone.is_aware(value):
+                        formatted_value = value.astimezone(timezone.get_current_timezone()).strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        formatted_value = value.strftime('%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    formatted_value = str(value)
+            elif isinstance(value, datetime.date):
+                formatted_value = value.strftime('%Y-%m-%d')
+            elif isinstance(value, Decimal):
+                formatted_value = f"{value:.2f}"
+            elif value is None:
+                formatted_value = ""
+            else:
+                formatted_value = str(value)
+            
+            formatted_row.append(formatted_value)
+        
+        writer.writerow(formatted_row)
+    
+    logger.info(f"CSV generado: {title} con {len(data_list)} filas.")
+    
+    # Crear HttpResponse con headers correctos
+    output.seek(0)
+    response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8-sig')
+    
+    timestamp_file = timezone.now().strftime('%Y%m%d_%H%M%S')
+    # Limpiar título para nombre de archivo (sin caracteres especiales)
+    safe_title = title.replace(' ', '_').replace('/', '-').replace('\\', '-')
+    filename = f"{safe_title}_{timestamp_file}.csv"
+    
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
