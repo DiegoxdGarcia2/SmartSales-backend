@@ -63,41 +63,42 @@ def build_report_query(options: dict):
                 total_ventas=Sum(F('quantity') * F('price')),
                 total_unidades=Sum('quantity'),
                 total_ordenes=Count('order__id', distinct=True)
-            ).order_by('group')
+            ).order_by('group')[:120]  # Máximo 120 meses (10 años)
             headers = ['Mes', 'Ventas Totales', 'Unidades Vendidas', 'Órdenes']
         
         elif group_by == 'category':
             queryset = queryset.values('product__category__name').annotate(
                 total_ventas=Sum(F('quantity') * F('price')),
                 total_unidades=Sum('quantity')
-            ).order_by('-total_ventas')
+            ).order_by('-total_ventas')[:1000]  # Máximo 1000 categorías
             headers = ['Categoría', 'Ventas Totales', 'Unidades Vendidas']
         
         elif group_by == 'brand':
             queryset = queryset.values('product__brand__name').annotate(
                 total_ventas=Sum(F('quantity') * F('price')),
                 total_unidades=Sum('quantity')
-            ).order_by('-total_ventas')
+            ).order_by('-total_ventas')[:1000]  # Máximo 1000 marcas
             headers = ['Marca', 'Ventas Totales', 'Unidades Vendidas']
         
         elif group_by == 'product':
             queryset = queryset.values('product__name').annotate(
                 total_ventas=Sum(F('quantity') * F('price')),
                 total_unidades=Sum('quantity')
-            ).order_by('-total_ventas')
+            ).order_by('-total_ventas')[:5000]  # Máximo 5000 productos
             headers = ['Producto', 'Ventas Totales', 'Unidades Vendidas']
 
         elif group_by == 'user':
             queryset = queryset.values('order__user__username').annotate(
                 total_ventas=Sum(F('quantity') * F('price')),
                 total_ordenes=Count('order__id', distinct=True)
-            ).order_by('-total_ventas')
+            ).order_by('-total_ventas')[:5000]  # Máximo 5000 clientes
             headers = ['Cliente (Username)', 'Ventas Totales', 'Órdenes Realizadas']
 
         else:  # Reporte detallado de items de ventas (sin agrupar)
+            # 🔧 LÍMITE DE SEGURIDAD: Máximo 10,000 registros para evitar out of memory
             queryset = queryset.select_related(
                 'order', 'order__user', 'product', 'product__category', 'product__brand'
-            ).order_by('-order__created_at').values(
+            ).order_by('-order__created_at')[:10000].values(
                 'order__id',
                 'order__created_at',
                 'order__user__username',
@@ -108,6 +109,7 @@ def build_report_query(options: dict):
                 'price',
             )
             headers = ['ID Orden', 'Fecha', 'Cliente', 'Producto', 'Categoría', 'Marca', 'Cantidad', 'Precio']
+            logger.info(f"Reporte detallado de ventas limitado a 10,000 registros para proteger memoria")
 
     # --- MÓDULO PRODUCTOS ---
     elif module == 'productos':
@@ -134,7 +136,7 @@ def build_report_query(options: dict):
                 conteo_productos=Count('id'),
                 stock_total=Sum('stock'),
                 precio_promedio=Avg('price')
-            ).order_by('-conteo_productos')
+            ).order_by('-conteo_productos')[:1000]  # Máximo 1000 marcas
             headers = ['Marca', 'Nro. Productos', 'Stock Total', 'Precio Promedio']
         
         elif group_by == 'category':
@@ -142,14 +144,16 @@ def build_report_query(options: dict):
                 conteo_productos=Count('id'),
                 stock_total=Sum('stock'),
                 precio_promedio=Avg('price')
-            ).order_by('-conteo_productos')
+            ).order_by('-conteo_productos')[:1000]  # Máximo 1000 categorías
             headers = ['Categoría', 'Nro. Productos', 'Stock Total', 'Precio Promedio']
         
         else:  # Reporte detallado de productos
-            queryset = queryset.select_related('category', 'brand').order_by('name').values(
+            # 🔧 LÍMITE DE SEGURIDAD: Máximo 5,000 productos
+            queryset = queryset.select_related('category', 'brand').order_by('name')[:5000].values(
                 'name', 'category__name', 'brand__name', 'price', 'stock', 'created_at'
             )
             headers = ['Producto', 'Categoría', 'Marca', 'Precio', 'Stock', 'Fecha Creación']
+            logger.info(f"Reporte detallado de productos limitado a 5,000 registros")
 
     # --- MÓDULO CLIENTES ---
     elif module == 'clientes':
@@ -162,10 +166,12 @@ def build_report_query(options: dict):
             queryset = queryset.filter(username__icontains=filters['user_username'])
         
         # (Agrupación no muy relevante aquí, solo listado)
-        queryset = queryset.select_related('client_profile').order_by('-date_joined').values(
+        # 🔧 LÍMITE DE SEGURIDAD: Máximo 5,000 clientes
+        queryset = queryset.select_related('client_profile').order_by('-date_joined')[:5000].values(
             'username', 'email', 'first_name', 'last_name', 'date_joined', 'client_profile__phone_number'
         )
         headers = ['Username', 'Email', 'Nombre', 'Apellido', 'Fecha Registro', 'Teléfono']
+        logger.info(f"Reporte detallado de clientes limitado a 5,000 registros")
 
     # --- MÓDULO RESEÑAS ---
     elif module == 'reseñas':
@@ -193,14 +199,16 @@ def build_report_query(options: dict):
             queryset = queryset.values('product__name').annotate(
                 conteo_reseñas=Count('id'),
                 rating_promedio=Avg('rating')
-            ).order_by('-conteo_reseñas')
+            ).order_by('-conteo_reseñas')[:5000]  # Máximo 5000 productos
             headers = ['Producto', 'Nro. Reseñas', 'Rating Promedio']
 
         else:  # Reporte detallado de reseñas
-            queryset = queryset.select_related('product', 'user').order_by('-created_at').values(
+            # 🔧 LÍMITE DE SEGURIDAD: Máximo 10,000 reseñas
+            queryset = queryset.select_related('product', 'user').order_by('-created_at')[:10000].values(
                 'created_at', 'product__name', 'user__username', 'rating', 'comment', 'sentiment'
             )
             headers = ['Fecha', 'Producto', 'Cliente', 'Rating', 'Comentario', 'Sentimiento']
+            logger.info(f"Reporte detallado de reseñas limitado a 10,000 registros")
     
     logger.info(f"Query builder generó {queryset.count() if queryset else 0} resultados para el módulo {module}.")
     return queryset, headers
