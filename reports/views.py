@@ -1,9 +1,14 @@
 import logging
+import io
+import csv
+import openpyxl
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser
+from django.http import HttpResponse
 from django.utils import timezone
+from dateutil.parser import parse as date_parse
 
 # Importar nuestros módulos de reportes
 from .parser import parse_report_prompt
@@ -121,7 +126,6 @@ class DynamicReportAPIView(APIView):
             options = options_structured
             
             # 🔧 FIX: Parsear fechas si vienen como strings
-            from dateutil.parser import parse as date_parse
             if 'start_date' in options and isinstance(options['start_date'], str):
                 try:
                     parsed_date = date_parse(options['start_date'])
@@ -226,8 +230,6 @@ class DynamicReportAPIView(APIView):
             
             elif options['format'] == 'csv':
                 # Generar CSV vacío con mensaje
-                import io
-                import csv
                 output = io.StringIO()
                 writer = csv.writer(output)
                 writer.writerow(['Mensaje'])
@@ -243,8 +245,6 @@ class DynamicReportAPIView(APIView):
             
             elif options['format'] == 'excel':
                 # Generar Excel vacío con mensaje
-                import io
-                import openpyxl
                 workbook = openpyxl.Workbook()
                 sheet = workbook.active
                 sheet.title = "Sin Resultados"
@@ -264,7 +264,6 @@ class DynamicReportAPIView(APIView):
             
             elif options['format'] == 'pdf':
                 # Generar PDF vacío con mensaje
-                from django.http import HttpResponse
                 html_content = """
                 <!DOCTYPE html>
                 <html>
