@@ -12,7 +12,7 @@ from dateutil.parser import parse as date_parse
 
 # Importar nuestros módulos de reportes
 from .parser import parse_report_prompt
-from .ai_parser import parse_with_gemini
+from .ai_parser import parse_with_gemini, parse_with_gemini_audio
 from .query_builder import build_report_query
 from .generators import generate_excel_report, generate_pdf_report, generate_csv_report
 
@@ -355,3 +355,5 @@ class DynamicReportAPIView(APIView):
                 {"error": f"Error al generar el archivo: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
