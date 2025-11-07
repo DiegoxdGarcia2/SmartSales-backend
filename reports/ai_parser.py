@@ -5,7 +5,6 @@ Este módulo utiliza Gemini 1.5 Pro para convertir prompts en lenguaje natural
 a estructuras JSON para generar reportes dinámicos.
 """
 
-import google.generativeai as genai
 from django.conf import settings
 import json
 import logging
@@ -14,8 +13,8 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-# Configurar Gemini con la API key
-genai.configure(api_key=settings.GOOGLE_AI_API_KEY)
+# NO importar genai aquí - hacerlo lazy para evitar OOM en Render
+# import google.generativeai as genai
 
 # System prompt optimizado para Gemini
 SYSTEM_PROMPT = """
@@ -132,6 +131,10 @@ def parse_with_gemini(user_prompt: str) -> dict:
     try:
         logger.info(f"🤖 Parseando con Gemini AI: '{user_prompt}'")
         
+        # Lazy import para evitar OOM en Render durante startup
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GOOGLE_AI_API_KEY)
+        
         # Usar Gemini 2.5 Flash (modelo estable, rápido y con soporte multimodal)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
@@ -240,6 +243,10 @@ def parse_with_gemini_audio(audio_data: bytes, mime_type: str = "audio/webm") ->
     """
     try:
         logger.info(f"🎤 Parseando audio con Gemini AI (mime_type: {mime_type})")
+        
+        # Lazy import para evitar OOM en Render durante startup
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GOOGLE_AI_API_KEY)
         
         model = genai.GenerativeModel('gemini-2.5-flash')
         
