@@ -184,18 +184,44 @@ def parse_with_gemini(user_prompt: str) -> dict:
             logger.warning("⚠️ Gemini no retornó el campo 'format', usando 'excel' por defecto")
             result['format'] = 'excel'
         
+        # Convertir fechas string a datetime timezone-aware
+        start_date_obj = None
+        end_date_obj = None
+        
+        if result.get('start_date'):
+            try:
+                from dateutil.parser import parse as date_parse
+                start_date_obj = date_parse(result['start_date'])
+                if timezone.is_naive(start_date_obj):
+                    start_date_obj = timezone.make_aware(start_date_obj)
+                start_date_obj = start_date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                logger.info(f"📅 Start date parseada: {start_date_obj}")
+            except Exception as e:
+                logger.warning(f"⚠️ Error parseando start_date '{result['start_date']}': {e}")
+        
+        if result.get('end_date'):
+            try:
+                from dateutil.parser import parse as date_parse
+                end_date_obj = date_parse(result['end_date'])
+                if timezone.is_naive(end_date_obj):
+                    end_date_obj = timezone.make_aware(end_date_obj)
+                end_date_obj = end_date_obj.replace(hour=23, minute=59, second=59, microsecond=999999)
+                logger.info(f"📅 End date parseada: {end_date_obj}")
+            except Exception as e:
+                logger.warning(f"⚠️ Error parseando end_date '{result['end_date']}': {e}")
+        
         # Asegurar estructura completa
         parsed_result = {
             'module': result.get('module'),
             'format': result.get('format', 'excel'),
-            'start_date': result.get('start_date'),
-            'end_date': result.get('end_date'),
+            'start_date': start_date_obj,  # Ya es datetime con timezone
+            'end_date': end_date_obj,      # Ya es datetime con timezone
             'filters': result.get('filters', {}),
             'group_by': result.get('group_by'),
             'errors': []
         }
         
-        logger.info(f"✅ Parsing exitoso: module={parsed_result['module']}, format={parsed_result['format']}")
+        logger.info(f"✅ Parsing exitoso: module={parsed_result['module']}, format={parsed_result['format']}, dates={start_date_obj} to {end_date_obj}")
         return parsed_result
         
     except json.JSONDecodeError as e:
