@@ -37,6 +37,13 @@ RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+# Google Cloud Run inyecta el hostname en K_SERVICE
+CLOUD_RUN_SERVICE_URL = os.environ.get('K_SERVICE')
+if CLOUD_RUN_SERVICE_URL:
+    # Cloud Run URLs son *.run.app
+    ALLOWED_HOSTS.append('.run.app')
+    ALLOWED_HOSTS.append('*')  # Para dominios custom
+
 
 # Application definition
 

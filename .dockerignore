@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.venv
+venv
+env
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov
+
+# Local
+db.sqlite3
+*.log
+.env
+.env.local
+
+# Documentos
+*.md
+README.md
+PROMPTS_LENGUAJE_NATURAL.md
+FRONTEND_INTEGRATION_GUIDE.md
+CRITICAL_FIX_CSV_RESPONSE.md
+
+# Scripts de testing
+_testing_scripts
+reportes_generados
