@@ -167,8 +167,12 @@ def generate_pdf_report(queryset, headers: list, title: str, original_prompt: st
             content_type="text/plain"
         )
     
-    # Convertir queryset a lista de diccionarios (ya debería serlo, pero por si acaso)
-    data_list = list(queryset)
+    # 🚀 OPTIMIZACIÓN: Procesar en chunks para reducir memoria
+    # Limitar registros procesados (debería estar ya limitado en views.py)
+    MAX_RECORDS = 100
+    data_list = list(queryset[:MAX_RECORDS])
+    
+    logger.info(f"📄 Generando PDF con {len(data_list)} registros")
     
     # Formatear datos para el PDF (convertir datetime, Decimal, etc a strings legibles)
     formatted_data = []
@@ -193,7 +197,7 @@ def generate_pdf_report(queryset, headers: list, title: str, original_prompt: st
             elif value is None:
                 formatted_row[key] = "N/A"
             else:
-                formatted_row[key] = str(value)
+                formatted_row[key] = str(value)[:100]  # Truncar strings largos
         formatted_data.append(formatted_row)
 
     # Renderizar el template HTML a una string
@@ -206,12 +210,19 @@ def generate_pdf_report(queryset, headers: list, title: str, original_prompt: st
     }
     html_string = render_to_string('reports/pdf_template.html', context)
     
-    # Generar PDF con WeasyPrint
+    # Generar PDF con WeasyPrint (con optimizaciones de memoria)
     try:
-        pdf_file = HTML(string=html_string, base_url=str(settings.BASE_DIR)).write_pdf()
-        logger.info(f"PDF generado: {title} con {len(data_list)} filas.")
+        logger.info("🔄 Iniciando generación de PDF con WeasyPrint...")
+        
+        # Opciones de optimización para reducir uso de memoria
+        from weasyprint import HTML
+        pdf_file = HTML(string=html_string, base_url=str(settings.BASE_DIR)).write_pdf(
+            optimize_size=('fonts', 'images')  # Comprimir fuentes e imágenes
+        )
+        
+        logger.info(f"✅ PDF generado exitosamente: {title} con {len(data_list)} filas ({len(pdf_file)} bytes)")
     except Exception as e:
-        logger.error(f"Error al generar PDF con WeasyPrint: {e}", exc_info=True)
+        logger.error(f"❌ Error al generar PDF con WeasyPrint: {e}", exc_info=True)
         return HttpResponse(
             f"Error al generar PDF: {e}",
             status=500,

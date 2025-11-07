@@ -336,6 +336,25 @@ class DynamicReportAPIView(APIView):
             
             elif options.get('format') == 'pdf':
                 logger.info("Generando reporte PDF...")
+                
+                # 🔒 PROTECCIÓN: PDF consume mucha memoria en Render Free Tier (512MB)
+                # Limitar reportes PDF a máximo 100 registros
+                MAX_PDF_RECORDS = 100
+                record_count = queryset.count()
+                
+                if record_count > MAX_PDF_RECORDS:
+                    logger.warning(f"⚠️ PDF rechazado: {record_count} registros excede límite de {MAX_PDF_RECORDS}")
+                    return Response(
+                        {
+                            "error": f"PDF no disponible para {record_count} registros",
+                            "message": f"Los reportes PDF están limitados a {MAX_PDF_RECORDS} registros para evitar problemas de memoria.",
+                            "suggestion": "Usa formato Excel o CSV para grandes volúmenes de datos, o aplica más filtros para reducir los resultados.",
+                            "record_count": record_count,
+                            "max_allowed": MAX_PDF_RECORDS
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
                 return generate_pdf_report(queryset, headers, title, options.get('original_prompt', 'Reporte'))
             
             else:  # 'json' (vista en pantalla)
