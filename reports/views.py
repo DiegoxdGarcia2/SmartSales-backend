@@ -347,7 +347,14 @@ class DynamicReportAPIView(APIView):
             else:  # 'json' (vista en pantalla)
                 logger.info("Generando respuesta JSON...")
                 # El queryset es un .values(), que es una lista de diccionarios, lista para JSON
-                return Response(list(queryset), status=status.HTTP_200_OK)
+                data = list(queryset)
+                logger.info(f"📊 Retornando {len(data)} registros en formato JSON")
+                return Response({
+                    'data': data,
+                    'count': len(data),
+                    'title': title,
+                    'headers': headers
+                }, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"Error al generar archivo para prompt '{prompt_text}': {e}", exc_info=True)
