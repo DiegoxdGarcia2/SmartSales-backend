@@ -1,0 +1,25 @@
+# Google Cloud Build ignore file
+# This file specifies files that should NOT be uploaded
+
+.git
+.gitignore
+__pycache__
+*.pyc
+.venv
+venv
+env
+.idea
+.vscode
+*.log
+db.sqlite3
+
+# Documentos
+*.md
+
+# Testing
+_testing_scripts
+reportes_generados
+_backups
+
+# IMPORTANT: Do NOT ignore requirements.txt
+!requirements.txt

@@ -18,18 +18,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar dependencias de Python
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r requirements.txt
-
-# Copiar el código de la aplicación
+# Copiar el código de la aplicación primero
 COPY . /app/
+
+# DEBUG: Listar archivos para verificar
+RUN ls -la /app/ && ls -la /app/requirements.txt || echo "requirements.txt NO EXISTE"
+
+# Instalar dependencias de Python
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Exponer el puerto que usará Gunicorn (Render lo inyectará como $PORT)
 EXPOSE 8000
 
-# Copiar y dar permisos al script de inicio
-COPY run.sh /app/run.sh
+# Dar permisos al script de inicio
 RUN chmod +x /app/run.sh
 
 # Usar run.sh como comando de inicio
