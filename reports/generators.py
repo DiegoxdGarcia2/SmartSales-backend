@@ -167,10 +167,9 @@ def generate_pdf_report(queryset, headers: list, title: str, original_prompt: st
             content_type="text/plain"
         )
     
-    # 🚀 OPTIMIZACIÓN: Procesar en chunks para reducir memoria
-    # Limitar registros procesados (debería estar ya limitado en views.py)
-    MAX_RECORDS = 100
-    data_list = list(queryset[:MAX_RECORDS])
+    # ✅ Google Cloud Run: 2GB RAM - Sin límite de registros
+    # Procesamos todos los datos del queryset
+    data_list = list(queryset)
     
     logger.info(f"📄 Generando PDF con {len(data_list)} registros")
     
