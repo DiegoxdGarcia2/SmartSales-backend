@@ -12,6 +12,7 @@ from dateutil.parser import parse as date_parse
 
 # Importar nuestros módulos de reportes
 from .parser import parse_report_prompt
+from .ai_parser import parse_with_gemini
 from .query_builder import build_report_query
 from .generators import generate_excel_report, generate_pdf_report, generate_csv_report
 
@@ -189,9 +190,24 @@ class DynamicReportAPIView(APIView):
             logger.info(f"Recibida solicitud de reporte por prompt: '{prompt_text}' (Formato override: {format_override})")
             
             try:
-                options = parse_report_prompt(prompt_text)
-                if format_override in ['pdf', 'excel', 'json']:
+                # 🤖 INTENTAR CON GEMINI AI PRIMERO
+                logger.info("🤖 Intentando parsear con Gemini AI...")
+                options = parse_with_gemini(prompt_text)
+                
+                # Si Gemini falla, hacer fallback a regex
+                if options.get('errors') or not options.get('module'):
+                    logger.warning(f"⚠️ Gemini falló o no pudo parsear. Fallback a regex. Errores: {options.get('errors')}")
+                    options = parse_report_prompt(prompt_text)
+                else:
+                    logger.info(f"✅ Gemini parseó exitosamente: {options}")
+                
+                # Override de formato si se especificó
+                if format_override in ['pdf', 'excel', 'json', 'csv']:
                     options['format'] = format_override
+                
+                # Guardar el prompt original
+                options['original_prompt'] = prompt_text
+                
             except Exception as e:
                 logger.error(f"Error al parsear el prompt '{prompt_text}': {e}", exc_info=True)
                 return Response(

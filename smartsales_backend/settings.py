@@ -238,6 +238,9 @@ FRONTEND_CHECKOUT_CANCEL_URL = os.environ.get('FRONTEND_CHECKOUT_CANCEL_URL', 'h
 # Configurar Stripe API key globalmente
 stripe.api_key = STRIPE_SECRET_KEY
 
+# Google AI Configuration
+GOOGLE_AI_API_KEY = os.environ.get('GOOGLE_AI_API_KEY', '')
+
 # Cloudinary Configuration
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
