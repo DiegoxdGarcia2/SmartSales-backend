@@ -143,6 +143,14 @@ def parse_with_gemini(user_prompt: str) -> dict:
         # Reemplazar manualmente para evitar conflicto con {{ }}
         prompt = SYSTEM_PROMPT.replace('{current_date}', current_date)
         
+        # 🔧 FIX: Configurar safety settings para evitar bloqueos (finish_reason=2)
+        safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ]
+        
         # Generar respuesta
         response = model.generate_content(
             f"{prompt}\n\nInput del usuario: {user_prompt}\n\nOutput JSON:",
@@ -151,7 +159,8 @@ def parse_with_gemini(user_prompt: str) -> dict:
                 top_p=0.95,
                 top_k=40,
                 max_output_tokens=1024,
-            )
+            ),
+            safety_settings=safety_settings  # ✅ Evitar bloqueos por filtros de seguridad
         )
         
         # Obtener texto de respuesta

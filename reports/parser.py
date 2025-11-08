@@ -39,7 +39,20 @@ YESTERDAY_REGEX = re.compile(r'\b(ayer)\b', re.IGNORECASE)
 # --- Patrones de Filtros (Texto) ---
 # Captura "texto entre comillas" o una_palabra_sin_espacios
 BRAND_REGEX = re.compile(r'\b(de la marca|marca) (?:"([^"]*)"|(\S+))\b', re.IGNORECASE)
-CATEGORY_REGEX = re.compile(r'\b(de la categoria|categoria) (?:"([^"]*)"|(\S+))\b', re.IGNORECASE)
+# 🔧 FIX: Detectar categorías comunes sin requerir "categoria" explícita
+CATEGORY_REGEX = re.compile(r'\b(de la categoria|categoria|de) (?:"([^"]*)"|(\S+))\b', re.IGNORECASE)
+# Patrón alternativo para categorías comunes (lavadoras, computacion, televisores, smartphones, etc.)
+COMMON_CATEGORIES_REGEX = re.compile(
+    r'\b(lavadoras?|refrigeradores?|cocinas?|hornos?|microondas?|'
+    r'computaci[oó]n|computadoras?|laptops?|notebooks?|pcs?|'
+    r'televisores?|televisor|tvs?|pantallas?|monitores?|'
+    r'smartphones?|celulares?|tel[eé]fonos?|m[oó]viles?|'
+    r'tablets?|tabletas?|'
+    r'audio|sonido|parlantes?|auriculares?|audífonos?|'
+    r'gaming|videojuegos?|consolas?|'
+    r'accesorios?|cables?|cargadores?)\b',
+    re.IGNORECASE | re.UNICODE
+)
 CLIENT_REGEX = re.compile(r'\b(del cliente|cliente) (?:"([^"]*)"|(\S+))\b', re.IGNORECASE)
 
 # ============================================================================
@@ -272,7 +285,80 @@ def parse_report_prompt(prompt_text: str):
     # Filtro por Categoría
     if (category_name := _find_entity_match(text, CATEGORY_REGEX)):
         options['filters']['category_name'] = category_name
-        logger.debug(f"Filtro por categoría encontrado: {category_name}")
+        logger.debug(f"Filtro por categoría encontrado (explícito): {category_name}")
+    # 🔧 FIX: Si no se encontró categoría explícita, buscar categorías comunes
+    elif (match := COMMON_CATEGORIES_REGEX.search(text)):
+        category_name = match.group(1)
+        # Normalizar nombres comunes
+        category_map = {
+            'lavadora': 'Lavadoras',
+            'lavadoras': 'Lavadoras',
+            'refrigerador': 'Refrigeradores',
+            'refrigeradores': 'Refrigeradores',
+            'cocina': 'Cocinas',
+            'cocinas': 'Cocinas',
+            'horno': 'Hornos',
+            'hornos': 'Hornos',
+            'microondas': 'Microondas',
+            'computacion': 'Computación',
+            'computación': 'Computación',
+            'computadora': 'Computación',
+            'computadoras': 'Computación',
+            'laptop': 'Computación',
+            'laptops': 'Computación',
+            'notebook': 'Computación',
+            'notebooks': 'Computación',
+            'pc': 'Computación',
+            'pcs': 'Computación',
+            'televisor': 'Televisores',
+            'televisores': 'Televisores',
+            'tv': 'Televisores',
+            'tvs': 'Televisores',
+            'pantalla': 'Televisores',
+            'pantallas': 'Televisores',
+            'monitor': 'Monitores',
+            'monitores': 'Monitores',
+            'smartphone': 'Smartphones',
+            'smartphones': 'Smartphones',
+            'celular': 'Smartphones',
+            'celulares': 'Smartphones',
+            'telefono': 'Smartphones',
+            'teléfono': 'Smartphones',
+            'telefonos': 'Smartphones',
+            'teléfonos': 'Smartphones',
+            'movil': 'Smartphones',
+            'móvil': 'Smartphones',
+            'moviles': 'Smartphones',
+            'móviles': 'Smartphones',
+            'tablet': 'Tablets',
+            'tablets': 'Tablets',
+            'tableta': 'Tablets',
+            'tabletas': 'Tablets',
+            'audio': 'Audio',
+            'sonido': 'Audio',
+            'parlante': 'Audio',
+            'parlantes': 'Audio',
+            'auricular': 'Audio',
+            'auriculares': 'Audio',
+            'audifono': 'Audio',
+            'audífono': 'Audio',
+            'audifonos': 'Audio',
+            'audífonos': 'Audio',
+            'gaming': 'Gaming',
+            'videojuego': 'Gaming',
+            'videojuegos': 'Gaming',
+            'consola': 'Gaming',
+            'consolas': 'Gaming',
+            'accesorio': 'Accesorios',
+            'accesorios': 'Accesorios',
+            'cable': 'Accesorios',
+            'cables': 'Accesorios',
+            'cargador': 'Accesorios',
+            'cargadores': 'Accesorios',
+        }
+        normalized_category = category_map.get(category_name.lower(), category_name.title())
+        options['filters']['category_name'] = normalized_category
+        logger.debug(f"Filtro por categoría encontrado (común): {category_name} → {normalized_category}")
     
     # Filtro por Cliente (username)
     if (client_name := _find_entity_match(text, CLIENT_REGEX)):
