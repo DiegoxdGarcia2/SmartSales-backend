@@ -125,7 +125,13 @@ class VoiceReportAPIView(APIView):
             
             else:  # 'json'
                 logger.info('Generando respuesta JSON desde voz...')
-                return Response(list(queryset), status=status.HTTP_200_OK)
+                data = list(queryset)
+                return Response({
+                    'data': data,
+                    'count': len(data),
+                    'title': title,
+                    'headers': headers
+                }, status=status.HTTP_200_OK)
                 
         except Exception as e:
             logger.error(f'Error al generar archivo desde voz: {e}', exc_info=True)

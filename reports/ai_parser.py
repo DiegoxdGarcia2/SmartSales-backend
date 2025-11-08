@@ -295,11 +295,37 @@ def parse_with_gemini_audio(audio_data: bytes, mime_type: str = "audio/webm") ->
         
         result = json.loads(result_text)
         
+        # 🔧 FIX: Parsear fechas a timezone-aware datetime objects
+        start_date = None
+        end_date = None
+        
+        if result.get('start_date'):
+            try:
+                from dateutil.parser import parse as date_parse
+                start_date = date_parse(result['start_date'])
+                if timezone.is_naive(start_date):
+                    start_date = timezone.make_aware(start_date)
+                start_date = start_date.replace(hour=0, minute=0, second=0)
+                logger.info(f"🗓️ Fecha inicio parseada: {start_date}")
+            except Exception as e:
+                logger.error(f"Error parseando start_date de audio: {e}")
+        
+        if result.get('end_date'):
+            try:
+                from dateutil.parser import parse as date_parse
+                end_date = date_parse(result['end_date'])
+                if timezone.is_naive(end_date):
+                    end_date = timezone.make_aware(end_date)
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+                logger.info(f"🗓️ Fecha fin parseada: {end_date}")
+            except Exception as e:
+                logger.error(f"Error parseando end_date de audio: {e}")
+        
         return {
             'module': result.get('module'),
             'format': result.get('format', 'excel'),
-            'start_date': result.get('start_date'),
-            'end_date': result.get('end_date'),
+            'start_date': start_date,
+            'end_date': end_date,
             'filters': result.get('filters', {}),
             'group_by': result.get('group_by'),
             'errors': []

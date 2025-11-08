@@ -194,6 +194,8 @@ class DynamicReportAPIView(APIView):
                 logger.info("🤖 Intentando parsear con Gemini AI...")
                 options = parse_with_gemini(prompt_text)
                 
+                logger.info(f"📋 Gemini detectó formato: {options.get('format')}")
+                
                 # Si Gemini falla, hacer fallback a regex
                 if options.get('errors') or not options.get('module'):
                     logger.warning(f"⚠️ Gemini falló o no pudo parsear. Fallback a regex. Errores: {options.get('errors')}")
@@ -201,9 +203,18 @@ class DynamicReportAPIView(APIView):
                 else:
                     logger.info(f"✅ Gemini parseó exitosamente: {options}")
                 
-                # Override de formato si se especificó
-                if format_override in ['pdf', 'excel', 'json', 'csv']:
+                # 🔧 FIX: Asegurar que el formato JSON sea detectado correctamente
+                # Si viene format_override desde el frontend, úsalo SIEMPRE
+                # Esto resuelve el caso: "ventas lg" + formato="json" en frontend
+                if format_override and format_override in ['pdf', 'excel', 'json', 'csv']:
+                    logger.info(f"🔄 Aplicando override de formato: {format_override} (anterior: {options.get('format')})")
                     options['format'] = format_override
+                elif not options.get('format'):
+                    # Si Gemini no detectó formato, usar 'excel' por defecto
+                    logger.warning("⚠️ Sin formato detectado, usando 'excel' por defecto")
+                    options['format'] = 'excel'
+                
+                logger.info(f"📊 Formato final a generar: {options.get('format')}")
                 
                 # Guardar el prompt original
                 options['original_prompt'] = prompt_text
