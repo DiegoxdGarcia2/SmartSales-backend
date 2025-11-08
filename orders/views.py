@@ -493,7 +493,11 @@ class OrderReceiptPDFView(APIView):
                 
                 # Crear respuesta HTTP con el PDF
                 response = HttpResponse(pdf_file, content_type='application/pdf')
+                # FORZAR descarga directa (attachment en vez de inline)
                 response['Content-Disposition'] = f'attachment; filename="comprobante_pedido_{order_id}.pdf"'
+                # Headers adicionales para asegurar descarga
+                response['Content-Length'] = len(pdf_file)
+                response['X-Content-Type-Options'] = 'nosniff'
                 
                 logger.info(f"PDF generado exitosamente para orden {order_id}")
                 return response
