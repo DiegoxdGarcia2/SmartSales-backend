@@ -23,15 +23,15 @@ from pathlib import Path
 # ============================================
 
 # URL del backend
-BACKEND_URL = "https://smartsales-backend-891739940726.us-central1.run.app"
+BACKEND_URL = "https://smartsales-backend-891739940726.us-central1.run.app"  # Producción
 # BACKEND_URL = "http://localhost:8000"  # Para desarrollo local
 
 # ID de un pedido existente para probar
-ORDER_ID = 1880  # CAMBIAR por un ID de pedido válido
+ORDER_ID = 1880  # Pedido del admin en producción (07 Nov 2025, PAGADO)
 
 # Credenciales de usuario que es dueño del pedido
-EMAIL = "tu_email@ejemplo.com"  # CAMBIAR
-PASSWORD = "tu_password"  # CAMBIAR
+EMAIL = "admin@smartsales.com"
+PASSWORD = "admin123"
 
 # Directorio donde guardar el PDF de prueba
 OUTPUT_DIR = Path("test_downloads")
@@ -47,12 +47,12 @@ def get_auth_token(email, password):
     """
     print(f"\n🔐 Obteniendo token de autenticación para {email}...")
     
-    login_url = f"{BACKEND_URL}/api/auth/login/"
+    login_url = f"{BACKEND_URL}/api/token/"
     
     try:
         response = requests.post(
             login_url,
-            json={"email": email, "password": password}
+            json={"username": email, "password": password}  # username acepta email
         )
         
         if response.status_code == 200:
