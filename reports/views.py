@@ -108,10 +108,17 @@ class DynamicReportAPIView(APIView):
     permission_classes = [IsAdminUser]
 
     def post(self, request, *args, **kwargs):
+        # 🐛 DEBUG: Imprimir todo el request.data para ver qué está llegando
+        print(f"🔍 DEBUG - request.data completo: {request.data}")
+        print(f"🔍 DEBUG - request.data type: {type(request.data)}")
+        
         prompt_text = request.data.get('prompt')
         # Obtener opciones estructuradas (para la nueva UI de selectores)
         options_structured = request.data.get('options', None)
         format_override = request.data.get('format', None)
+        
+        print(f"🔍 DEBUG - prompt_text: {prompt_text}")
+        print(f"🔍 DEBUG - format_override: {format_override}")
 
         if not prompt_text and not options_structured:
             return Response(
