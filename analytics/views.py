@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import random
+import subprocess
 from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,26 +16,28 @@ from orders.models import Order, OrderItem
 from products.models import Category, Product
 from products.serializers import ProductSerializer
 from users.models import User, Role
+import joblib
 
 # Configurar logger
 logger = logging.getLogger(__name__)
 
 # Rutas de archivos ML
 MODEL_DIR = os.path.join(settings.BASE_DIR, 'ml_models')
+MODEL_PATH = os.path.join(MODEL_DIR, 'sales_model.joblib')
 PREDICTIONS_PATH = os.path.join(MODEL_DIR, 'predictions.json')
 ASSOC_PATH = os.path.join(MODEL_DIR, 'product_associations.json')
 
 
 class SalesPredictionView(APIView):
     """
-    Vista para obtener predicciones de ventas mensuales futuras pre-calculadas.
-    Lee las predicciones desde un archivo JSON generado por el comando train_sales_model.
+    Vista para obtener predicciones de ventas mensuales futuras.
+    Incluye metadata del modelo ML y métricas de rendimiento.
     """
     permission_classes = [IsAdminUser]
 
     def get(self, request, format=None):
         """
-        Retorna las predicciones pre-calculadas desde el archivo JSON.
+        Retorna las predicciones con información del modelo.
         """
         logger.info(f"Intentando leer predicciones desde {PREDICTIONS_PATH}")
         
@@ -42,25 +45,56 @@ class SalesPredictionView(APIView):
             logger.warning("Archivo de predicciones no encontrado.")
             return Response(
                 {
-                    "detail": "Las predicciones aún no han sido generadas. Ejecute el comando de entrenamiento."
+                    "status": "not_available",
+                    "message": "Las predicciones aún no han sido generadas.",
+                    "action": "Use POST /api/analytics/train-model/ para entrenar el modelo y generar predicciones."
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
         try:
+            # Leer predicciones
             with open(PREDICTIONS_PATH, 'r') as f:
                 predictions = json.load(f)
             
+            # Obtener metadata del modelo si existe
+            model_metadata = None
+            if os.path.exists(MODEL_PATH):
+                try:
+                    model_data = joblib.load(MODEL_PATH)
+                    model_metadata = {
+                        "algorithm": "RandomForestRegressor",
+                        "trained_at": model_data.get('trained_at').isoformat() if model_data.get('trained_at') else None,
+                        "rmse": float(model_data.get('rmse', 0)),
+                        "mape": float(model_data.get('mape', 0)) if model_data.get('mape') else None,
+                        "accuracy_percentage": round(100 - float(model_data.get('mape', 0)), 1) if model_data.get('mape') else None
+                    }
+                except Exception as e:
+                    logger.warning(f"No se pudo cargar metadata del modelo: {e}")
+            
             logger.info(f"Predicciones leídas exitosamente: {len(predictions)} meses.")
             
-            # Devuelve directamente el contenido del JSON (que ya es una lista)
-            return Response(predictions, status=status.HTTP_200_OK)
+            # Respuesta mejorada con metadata
+            response_data = {
+                "status": "success",
+                "predictions": predictions,
+                "metadata": {
+                    "prediction_count": len(predictions),
+                    "first_month": predictions[0]['month'] if predictions else None,
+                    "last_month": predictions[-1]['month'] if predictions else None,
+                    "model": model_metadata
+                }
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
             
         except Exception as e:
             logger.error(f"Error al leer el archivo de predicciones: {e}", exc_info=True)
             return Response(
                 {
-                    "detail": "Error al leer las predicciones guardadas."
+                    "status": "error",
+                    "message": "Error al leer las predicciones guardadas.",
+                    "error": str(e)
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -450,3 +484,159 @@ class DashboardKpiView(APIView):
                 {"detail": "Error al calcular KPIs."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class TrainSalesModelView(APIView):
+    """
+    Vista para entrenar o reentrenar el modelo de predicción de ventas.
+    Ejecuta el comando train_sales_model de forma asíncrona.
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, format=None):
+        """
+        Ejecuta el entrenamiento del modelo de ventas.
+        """
+        logger.info("🚀 Iniciando entrenamiento del modelo de predicción de ventas...")
+        
+        try:
+            # Ejecutar comando de entrenamiento
+            import sys
+            manage_py = os.path.join(settings.BASE_DIR, 'manage.py')
+            python_executable = sys.executable
+            
+            # Ejecutar comando
+            result = subprocess.run(
+                [python_executable, manage_py, 'train_sales_model'],
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minutos timeout
+            )
+            
+            if result.returncode == 0:
+                logger.info("✅ Modelo entrenado exitosamente")
+                
+                # Leer información del modelo recién entrenado
+                model_info = self._get_model_info()
+                
+                return Response({
+                    "status": "success",
+                    "message": "Modelo entrenado exitosamente",
+                    "model_info": model_info,
+                    "output": result.stdout[-500:] if result.stdout else ""  # Últimas 500 chars
+                }, status=status.HTTP_200_OK)
+            else:
+                logger.error(f"❌ Error al entrenar modelo: {result.stderr}")
+                return Response({
+                    "status": "error",
+                    "message": "Error al entrenar el modelo",
+                    "error": result.stderr[-500:] if result.stderr else ""
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except subprocess.TimeoutExpired:
+            logger.error("⏰ Timeout: El entrenamiento tardó más de 5 minutos")
+            return Response({
+                "status": "error",
+                "message": "Timeout: El entrenamiento tardó demasiado tiempo"
+            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+            
+        except Exception as e:
+            logger.error(f"Error inesperado al entrenar modelo: {e}", exc_info=True)
+            return Response({
+                "status": "error",
+                "message": f"Error inesperado: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def _get_model_info(self):
+        """Helper para obtener información del modelo"""
+        try:
+            if os.path.exists(MODEL_PATH):
+                model_data = joblib.load(MODEL_PATH)
+                return {
+                    "trained_at": model_data.get('trained_at').isoformat() if model_data.get('trained_at') else None,
+                    "rmse": float(model_data.get('rmse', 0)),
+                    "mape": float(model_data.get('mape', 0)) if model_data.get('mape') else None,
+                    "n_train_samples": model_data.get('n_train_samples', 0),
+                    "n_test_samples": model_data.get('n_test_samples', 0),
+                    "features": model_data.get('features', [])
+                }
+        except:
+            pass
+        return None
+
+
+class ModelInfoView(APIView):
+    """
+    Vista para obtener información sobre el modelo de ML actual.
+    Muestra métricas, fecha de entrenamiento y estado.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, format=None):
+        """
+        Retorna información del modelo de predicción de ventas.
+        """
+        logger.info("📊 Obteniendo información del modelo de predicción de ventas")
+        
+        # Verificar si existe el modelo
+        model_exists = os.path.exists(MODEL_PATH)
+        predictions_exist = os.path.exists(PREDICTIONS_PATH)
+        
+        if not model_exists:
+            return Response({
+                "status": "not_trained",
+                "message": "El modelo aún no ha sido entrenado. Use POST /api/analytics/train-model/ para entrenar.",
+                "model_exists": False,
+                "predictions_exist": predictions_exist
+            }, status=status.HTTP_200_OK)
+        
+        try:
+            # Cargar información del modelo
+            model_data = joblib.load(MODEL_PATH)
+            
+            # Información del archivo
+            model_file_stats = os.stat(MODEL_PATH)
+            model_size_mb = model_file_stats.st_size / (1024 * 1024)
+            
+            # Cargar predicciones si existen
+            predictions_info = None
+            if predictions_exist:
+                with open(PREDICTIONS_PATH, 'r') as f:
+                    predictions = json.load(f)
+                predictions_info = {
+                    "count": len(predictions),
+                    "first_month": predictions[0]['month'] if predictions else None,
+                    "last_month": predictions[-1]['month'] if predictions else None
+                }
+            
+            # Construir respuesta
+            response_data = {
+                "status": "trained",
+                "model_exists": True,
+                "predictions_exist": predictions_exist,
+                "model_info": {
+                    "trained_at": model_data.get('trained_at').isoformat() if model_data.get('trained_at') else None,
+                    "size_mb": round(model_size_mb, 2),
+                    "algorithm": "RandomForestRegressor",
+                    "features_count": len(model_data.get('features', [])),
+                    "features": model_data.get('features', [])
+                },
+                "performance_metrics": {
+                    "rmse": float(model_data.get('rmse', 0)),
+                    "mape": float(model_data.get('mape', 0)) if model_data.get('mape') else None,
+                    "n_train_samples": model_data.get('n_train_samples', 0),
+                    "n_test_samples": model_data.get('n_test_samples', 0)
+                },
+                "predictions": predictions_info
+            }
+            
+            logger.info(f"✅ Información del modelo obtenida: entrenado el {response_data['model_info']['trained_at']}")
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error al leer información del modelo: {e}", exc_info=True)
+            return Response({
+                "status": "error",
+                "message": "Error al leer la información del modelo",
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
