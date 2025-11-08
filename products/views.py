@@ -8,6 +8,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from .models import Category, Product, Brand, Review
 from .serializers import CategorySerializer, ProductSerializer, BrandSerializer, ReviewSerializer
 from .permissions import HasPurchasedProduct, IsReviewAuthorOrReadOnly
+from .gemini_sentiment import analyze_review_sentiment_advanced, extract_basic_sentiment
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -157,7 +158,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """
         Asigna el usuario automáticamente, valida que haya comprado el producto
-        y analiza automáticamente el sentimiento de la reseña.
+        y analiza automáticamente el sentimiento de la reseña con Gemini AI.
         """
         user = self.request.user
         product = serializer.validated_data['product']  # Obtener instancia del producto
@@ -172,16 +173,55 @@ class ReviewViewSet(viewsets.ModelViewSet):
             # Usar ValidationError que el frontend puede interpretar mejor como 400
             raise drf_serializers.ValidationError({'detail': 'Ya has dejado una reseña para este producto.'})
 
-        # 3. Analizar sentimiento de la reseña
+        # 3. Analizar sentimiento de la reseña con Gemini AI (análisis avanzado)
         rating = serializer.validated_data['rating']
         comment = serializer.validated_data.get('comment', '')
-        sentiment, sentiment_score = analyze_review_sentiment(rating, comment)
         
-        logger.info(f"Nueva reseña - Producto: {product.id}, Rating: {rating}, Sentimiento: {sentiment} ({sentiment_score:.2f})")
-
-        # 4. Intentar guardar con usuario y sentimiento
         try:
-            serializer.save(user=user, sentiment=sentiment, sentiment_score=sentiment_score)
+            # Análisis avanzado con Gemini
+            analysis = analyze_review_sentiment_advanced(
+                rating=rating, 
+                comment=comment,
+                product_name=product.name
+            )
+            
+            # Extraer sentimiento básico para compatibilidad
+            sentiment, sentiment_score = extract_basic_sentiment(analysis)
+            
+            # Extraer datos avanzados
+            sentiment_confidence = analysis.get('confidence', 0.8)
+            sentiment_summary = analysis.get('summary', '')
+            aspects = analysis.get('aspects', {})
+            keywords = analysis.get('keywords', [])
+            
+            logger.info(
+                f"✨ Nueva reseña analizada con Gemini - "
+                f"Producto: {product.id}, Rating: {rating}, "
+                f"Sentimiento: {sentiment} (confianza: {sentiment_confidence:.2f})"
+            )
+            
+        except Exception as e:
+            # Fallback a análisis simple si Gemini falla
+            logger.warning(f"⚠️ Gemini falló, usando análisis simple: {e}")
+            sentiment, sentiment_score = analyze_review_sentiment(rating, comment)
+            sentiment_confidence = 0.7
+            sentiment_summary = f"Análisis basado en rating {rating}/5"
+            aspects = {}
+            keywords = []
+
+        # 4. Intentar guardar con usuario y análisis de sentimiento completo
+        try:
+            serializer.save(
+                user=user,
+                sentiment=sentiment,
+                sentiment_score=sentiment_score,
+                sentiment_confidence=sentiment_confidence,
+                sentiment_summary=sentiment_summary,
+                aspect_quality=aspects.get('product_quality'),
+                aspect_value=aspects.get('value_for_money'),
+                aspect_delivery=aspects.get('delivery_experience'),
+                keywords=keywords if keywords else None
+            )
         except IntegrityError:
             # Esto captura el error si la validación anterior fallara por alguna razón (ej. condición de carrera)
             raise drf_serializers.ValidationError({'detail': 'Error de integridad, posible reseña duplicada.'})

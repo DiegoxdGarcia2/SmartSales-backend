@@ -78,3 +78,18 @@ _backups/
 reportes_generados/
 *.xlsx
 *.pdf
+
+# Documentación y scripts de desarrollo
+docs/
+check_database.py
+test_endpoints.py
+frontend_fix.tsx
+
+# Backups y archivos temporales
+*.backup
+*.bak
+.env.yaml.backup
+
+# ML models (pueden ser grandes)
+ml_models/*.joblib
+ml_models/*.json

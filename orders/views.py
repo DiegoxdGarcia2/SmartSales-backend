@@ -449,3 +449,80 @@ class OrderReceiptView(APIView):
                 {"detail": "Ocurrió un error inesperado al generar el comprobante."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class OrderReceiptPDFView(APIView):
+    """
+    Vista para descargar comprobante de pedido en formato PDF.
+    Utiliza WeasyPrint para convertir el template HTML a PDF profesional.
+    """
+    permission_classes = [IsAuthenticated]
+    template_name = 'orders/receipt.html'
+
+    def get(self, request, order_id, format=None):
+        logger.info(f"Generando PDF del pedido {order_id} para usuario {request.user.id}")
+        
+        try:
+            # Obtener la orden con relaciones precargadas
+            order = Order.objects.select_related('user').prefetch_related(
+                'items',
+                'items__product',
+                'items__product__brand',
+                'items__product__category'
+            ).get(id=order_id)
+
+            # Verificar permisos: solo el dueño o staff
+            if order.user != request.user and not request.user.is_staff:
+                logger.warning(
+                    f"Acceso denegado PDF: Usuario {request.user.id} intentó descargar "
+                    f"comprobante de orden {order_id} (usuario {order.user.id})"
+                )
+                return Response(
+                    {"detail": "No tienes permiso para descargar este comprobante."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Renderizar template HTML con contexto
+            context = {'order': order}
+            html_content = render_to_string(self.template_name, context, request=request)
+            
+            # Generar PDF con WeasyPrint
+            try:
+                from weasyprint import HTML
+                pdf_file = HTML(string=html_content).write_pdf()
+                
+                # Crear respuesta HTTP con el PDF
+                response = HttpResponse(pdf_file, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="comprobante_pedido_{order_id}.pdf"'
+                
+                logger.info(f"PDF generado exitosamente para orden {order_id}")
+                return response
+                
+            except ImportError:
+                logger.error("WeasyPrint no está instalado.")
+                return Response(
+                    {"detail": "Error de configuración del servidor: WeasyPrint no disponible."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            except Exception as pdf_error:
+                logger.error(f"Error al generar PDF: {pdf_error}", exc_info=True)
+                return Response(
+                    {"detail": f"Error al generar el PDF: {str(pdf_error)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        except Order.DoesNotExist:
+            logger.error(f"Orden {order_id} no encontrada para generar PDF.")
+            return Response(
+                {"detail": "Pedido no encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(
+                f"Error inesperado al generar PDF para orden {order_id}: {e}",
+                exc_info=True
+            )
+            return Response(
+                {"detail": "Ocurrió un error inesperado al generar el comprobante PDF."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

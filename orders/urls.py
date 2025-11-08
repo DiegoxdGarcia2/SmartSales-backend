@@ -1,6 +1,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CartView, OrderViewSet, CreateCheckoutSessionView, StripeWebhookView, OrderReceiptView
+from .views import (
+    CartView, 
+    OrderViewSet, 
+    CreateCheckoutSessionView, 
+    StripeWebhookView, 
+    OrderReceiptView,
+    OrderReceiptPDFView
+)
 
 router = DefaultRouter()
 router.register(r'orders', OrderViewSet, basename='order')
@@ -10,5 +17,6 @@ urlpatterns = [
     path('stripe/create-checkout-session/', CreateCheckoutSessionView.as_view(), name='create-checkout-session'),
     path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
     path('receipt/<int:order_id>/', OrderReceiptView.as_view(), name='order-receipt-api'),
+    path('receipt/<int:order_id>/pdf/', OrderReceiptPDFView.as_view(), name='order-receipt-pdf'),
     path('', include(router.urls)),
 ]

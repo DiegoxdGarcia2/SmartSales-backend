@@ -190,6 +190,49 @@ class Review(models.Model):
         help_text='Puntuación compuesta VADER (-1 a 1)'
     )
     
+    # Campos de Análisis Avanzado (Gemini AI)
+    sentiment_confidence = models.FloatField(
+        blank=True,
+        null=True,
+        verbose_name='Confianza del Análisis',
+        help_text='Nivel de confianza del análisis de sentimiento (0-1)',
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+    )
+    sentiment_summary = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name='Resumen del Sentimiento',
+        help_text='Breve resumen del sentimiento analizado por IA'
+    )
+    aspect_quality = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Aspecto: Calidad del Producto',
+        help_text='Evaluación de calidad del producto (1-5)',
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    aspect_value = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Aspecto: Relación Precio-Valor',
+        help_text='Evaluación de relación precio-calidad (1-5)',
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    aspect_delivery = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Aspecto: Experiencia de Entrega',
+        help_text='Evaluación de la experiencia de entrega (1-5)',
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    keywords = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name='Palabras Clave',
+        help_text='Palabras clave extraídas del comentario por IA'
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Fecha de creación',
