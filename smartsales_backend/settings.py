@@ -113,8 +113,15 @@ DATABASES = {
         default=os.environ.get('DATABASE_URL', 'postgresql://postgres:admin123@localhost:5432/smartsales_db'),
         conn_max_age=600,  # Reutilizar conexiones
         conn_health_checks=True,
+        ssl_require=True,  # Requiere SSL en producción
     )
 }
+
+# Configuración SSL para PostgreSQL en producción (Render)
+if not DEBUG:
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
 
 
 # Password validation
