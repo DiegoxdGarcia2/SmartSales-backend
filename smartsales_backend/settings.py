@@ -294,7 +294,13 @@ COMPLEMENTARY_CATEGORIES = {
 # =============================================================================
 # FIREBASE CONFIGURATION - Push Notifications
 # =============================================================================
-FIREBASE_CREDENTIALS_PATH = os.path.join(BASE_DIR, 'smartsales-firebase-key.json')
+# En Cloud Run, el secret se monta en /secrets/firebase.json
+# En local/Render, se busca en la raíz del proyecto
+FIREBASE_CREDENTIALS_PATH = os.environ.get(
+    'FIREBASE_CREDENTIALS_PATH',
+    '/secrets/firebase.json' if os.path.exists('/secrets/firebase.json') 
+    else os.path.join(BASE_DIR, 'smartsales-firebase-key.json')
+)
 FIREBASE_WEB_PUSH_CERTIFICATE = os.environ.get(
     'FIREBASE_WEB_PUSH_CERTIFICATE',
     '7rVPMZoay6m1vIC8k61PaqIu5vL_cSSxm_04t2GxepQ'  # VAPID Key
