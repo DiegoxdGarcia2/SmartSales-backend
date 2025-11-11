@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# ESTRATEGIA: Iniciar Gunicorn INMEDIATAMENTE sin esperar nada
-# Las migraciones y collectstatic se ejecutarán después manualmente o en otro job
+echo "🔄 Aplicando migraciones de base de datos..."
+python manage.py migrate --noinput
 
-echo "🚀 Iniciando Gunicorn inmediatamente (sin migraciones ni collectstatic)..."
-
-# Iniciar Gunicorn directamente
+echo "🚀 Iniciando Gunicorn..."
 exec gunicorn smartsales_backend.wsgi:application \
     --bind 0.0.0.0:${PORT:-8000} \
     --workers ${WEB_CONCURRENCY:-2} \
