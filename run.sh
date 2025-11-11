@@ -1,23 +1,11 @@
 #!/bin/bash
 
-# NO salir si falla un comando (para que migraciones/collectstatic no bloqueen)
-set +e
+# ESTRATEGIA: Iniciar Gunicorn INMEDIATAMENTE sin esperar nada
+# Las migraciones y collectstatic se ejecutarán después manualmente o en otro job
 
-# Ejecutar migraciones y collectstatic en background
-(
-    echo "🔄 Aplicando migraciones de base de datos en background..."
-    python manage.py migrate --noinput 2>&1 | head -20
-    echo "📦 Recolectando archivos estáticos en background..."
-    python manage.py collectstatic --noinput 2>&1 | head -20
-    echo "✅ Tareas de inicialización completadas"
-) &
+echo "🚀 Iniciando Gunicorn inmediatamente (sin migraciones ni collectstatic)..."
 
-# Guardar el PID del proceso background
-INIT_PID=$!
-
-echo "🚀 Iniciando Gunicorn inmediatamente..."
-# Cloud Run/Render inyectan la variable $PORT
-# Timeout aumentado para evitar worker timeouts
+# Iniciar Gunicorn directamente
 exec gunicorn smartsales_backend.wsgi:application \
     --bind 0.0.0.0:${PORT:-8000} \
     --workers ${WEB_CONCURRENCY:-2} \
