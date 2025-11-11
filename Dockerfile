@@ -30,8 +30,8 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Exponer el puerto que usará Gunicorn (Render lo inyectará como $PORT)
 EXPOSE 8000
 
-# Dar permisos al script de inicio
-RUN chmod +x /app/run.sh
+# Crear el script de inicio directamente con LF correcto
+RUN printf '#!/bin/bash\n\nPORT="${PORT:-8080}"\necho "🚀 Iniciando Gunicorn en puerto $PORT..."\n\nexec gunicorn smartsales_backend.wsgi:application \\\n    --bind "0.0.0.0:$PORT" \\\n    --workers ${WEB_CONCURRENCY:-2} \\\n    --timeout 120 \\\n    --graceful-timeout 120 \\\n    --keep-alive 5 \\\n    --log-level info \\\n    --access-logfile - \\\n    --error-logfile -\n' > /app/run.sh && chmod +x /app/run.sh
 
 # Usar run.sh como comando de inicio
 CMD ["/app/run.sh"]
