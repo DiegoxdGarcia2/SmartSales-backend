@@ -68,6 +68,8 @@ INSTALLED_APPS = [
     'orders',
     'analytics',
     'reports',
+    'notifications',  # Sistema de notificaciones
+    'offers',  # Sistema de ofertas
 ]
 
 MIDDLEWARE = [
@@ -288,3 +290,43 @@ COMPLEMENTARY_CATEGORIES = {
     'Climatización': ['Climatización'],  # Aire acondicionado + ventiladores/calefactores
     'Cuidado Personal': ['Cuidado Personal', 'Limpieza del Hogar'],  # Afeitadoras + secadores
 }
+
+# =============================================================================
+# FIREBASE CONFIGURATION - Push Notifications
+# =============================================================================
+FIREBASE_CREDENTIALS_PATH = os.path.join(BASE_DIR, 'smartsales-firebase-key.json')
+FIREBASE_WEB_PUSH_CERTIFICATE = os.environ.get(
+    'FIREBASE_WEB_PUSH_CERTIFICATE',
+    '7rVPMZoay6m1vIC8k61PaqIu5vL_cSSxm_04t2GxepQ'  # VAPID Key
+)
+
+# Inicializar Firebase Admin SDK
+try:
+    import firebase_admin
+    from firebase_admin import credentials
+    
+    if os.path.exists(FIREBASE_CREDENTIALS_PATH):
+        cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
+        firebase_admin.initialize_app(cred)
+        print("✅ Firebase Admin SDK initialized successfully")
+    else:
+        print("⚠️ Firebase credentials file not found. Push notifications will be disabled.")
+        print(f"   Expected path: {FIREBASE_CREDENTIALS_PATH}")
+except Exception as e:
+    print(f"⚠️ Error initializing Firebase: {e}")
+    print("   Push notifications will be disabled.")
+
+
+# ==========================================
+# EMAIL CONFIGURATION (Para notificaciones)
+# ==========================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'SmartSales <noreply@smartsales.com>')
+
+# URL del frontend (para links en emails)
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3039')

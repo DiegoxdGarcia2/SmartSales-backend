@@ -33,6 +33,8 @@ urlpatterns = [
     path('api/', include('orders.urls')),
     path('api/analytics/', include('analytics.urls')),
     path('api/reports/', include('reports.urls')),
+    path('api/notifications/', include('notifications.urls')),
+    path('api/offers/', include('offers.urls')),
     
     # JWT Authentication (vista personalizada)
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

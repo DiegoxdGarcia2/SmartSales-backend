@@ -35,6 +35,12 @@ db.sqlite3-journal
 # Environment variables
 .env
 .env.local
+.env.production
+
+# Firebase credentials (IMPORTANTE: NO SUBIR)
+smartsales-firebase-key.json
+*-firebase-key.json
+firebase-adminsdk-*.json
 
 # IDEs
 .vscode/

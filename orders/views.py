@@ -366,6 +366,21 @@ class StripeWebhookView(APIView):
                     
                     print(f"✅ Orden {order_id} marcada como PAGADO.")
                     
+                    # 🔔 ENVIAR NOTIFICACIONES
+                    try:
+                        from notifications.services import NotificationService
+                        
+                        # Notificar pago exitoso
+                        NotificationService.notify_payment_success(order)
+                        
+                        # Notificar pedido confirmado
+                        NotificationService.notify_order_confirmed(order)
+                        
+                        logger.info(f"📧 Notificaciones enviadas para orden {order_id}")
+                    except Exception as notif_error:
+                        logger.error(f"❌ Error enviando notificaciones para orden {order_id}: {notif_error}")
+                        # No fallar el webhook si falla la notificación
+                    
             except Order.DoesNotExist:
                 print(f"❌ Error: Orden {order_id} no encontrada para evento webhook.")
                 return Response(
@@ -390,6 +405,16 @@ class StripeWebhookView(APIView):
                     order.payment_status = 'fallido'
                     order.save()
                     print(f"⚠️ Pago fallido para orden {order_id}")
+                    
+                    # 🔔 NOTIFICAR PAGO FALLIDO
+                    try:
+                        from notifications.services import NotificationService
+                        reason = session.get('last_payment_error', {}).get('message', 'Error desconocido')
+                        NotificationService.notify_payment_failed(order.user, order_id, reason)
+                        logger.info(f"📧 Notificación de pago fallido enviada para orden {order_id}")
+                    except Exception as notif_error:
+                        logger.error(f"❌ Error enviando notificación de pago fallido: {notif_error}")
+                        
                 except Order.DoesNotExist:
                     pass
 
