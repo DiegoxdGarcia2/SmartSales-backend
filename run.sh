@@ -1,8 +1,10 @@
 #!/bin/bash
 
+PORT="${PORT:-8080}"
 echo "🚀 Iniciando Gunicorn en puerto $PORT..."
+
 exec gunicorn smartsales_backend.wsgi:application \
-    --bind 0.0.0.0:$PORT \
+    --bind "0.0.0.0:$PORT" \
     --workers ${WEB_CONCURRENCY:-2} \
     --timeout 120 \
     --graceful-timeout 120 \
