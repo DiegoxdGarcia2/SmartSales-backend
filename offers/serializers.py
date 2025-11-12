@@ -125,6 +125,7 @@ class OfferListSerializer(serializers.ModelSerializer):
     is_active = serializers.SerializerMethodField()
     time_remaining_hours = serializers.SerializerMethodField()
     products_count = serializers.SerializerMethodField()
+    offer_products = OfferProductSerializer(many=True, read_only=True)  # 🆕 Para filtros por categoría
     
     class Meta:
         model = Offer
@@ -143,6 +144,7 @@ class OfferListSerializer(serializers.ModelSerializer):
             'priority',
             'conversions_count',
             'created_at',
+            'offer_products',  # 🆕 Incluir productos en el listado
         ]
     
     def get_is_active(self, obj):
