@@ -2,11 +2,9 @@
 
 PORT="${PORT:-8080}"
 
-# Aplicar migraciones de base de datos
-echo "� Aplicando migraciones de base de datos..."
-python manage.py migrate --noinput
-
-echo "�🚀 Iniciando Gunicorn en puerto $PORT..."
+# Nota: Las migraciones se deben aplicar manualmente desde Render backend
+# debido a problemas de SSL entre Cloud Run y Render PostgreSQL
+echo "� Iniciando Gunicorn en puerto $PORT..."
 exec gunicorn smartsales_backend.wsgi:application \
     --bind "0.0.0.0:$PORT" \
     --workers ${WEB_CONCURRENCY:-2} \

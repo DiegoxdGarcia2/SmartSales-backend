@@ -269,6 +269,16 @@ class OfferService:
             UserOfferInteraction: Interacción registrada
         """
         try:
+            # Solo registrar interacciones para usuarios autenticados
+            if not user.is_authenticated:
+                logger.debug(f"Interacción ignorada para usuario anónimo: {action} - {offer.name}")
+                # Igual actualizamos los contadores de la oferta
+                if action == 'VIEWED':
+                    offer.increment_view()
+                elif action == 'CLICKED':
+                    offer.increment_click()
+                return None
+            
             interaction = UserOfferInteraction.objects.create(
                 user=user,
                 offer=offer,

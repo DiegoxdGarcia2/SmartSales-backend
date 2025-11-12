@@ -36,6 +36,7 @@ db.sqlite3-journal
 .env
 .env.local
 .env.production
+.env.production.yaml
 
 # Firebase credentials (IMPORTANTE: NO SUBIR)
 smartsales-firebase-key.json
@@ -70,26 +71,35 @@ coverage.xml
 # mypy
 .mypy_cache/
 
-# Testing scripts and temporary files
+# Testing scripts (archivos de testing manual)
 _testing_scripts/
-*.txt
-test_*.xlsx
-update_*.sql
 
-# Database backups
+# Database backups y scripts de migración
 _backups/
-*backup*.sql
+*.dump
+backup*.sql
+backup*.py
+process_backup.py
+fix_order_dates.py
+truncate_tables.sql
+change_owner_truncate.sql
 
 # Reportes generados (archivos temporales de prueba)
 reportes_generados/
 *.xlsx
 *.pdf
 
-# Documentación y scripts de desarrollo
+# Documentación local (no subir al repo)
 docs/
-check_database.py
-test_endpoints.py
-frontend_fix.tsx
+
+# Cloud SQL Proxy
+cloud-sql-proxy.exe
+
+# Scripts obsoletos de deployment
+deploy.ps1
+migrate.sh
+apply_migrations_cloudshell.sh
+update-env-vars.sh
 
 # Backups y archivos temporales
 *.backup

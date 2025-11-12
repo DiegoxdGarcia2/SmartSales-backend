@@ -104,6 +104,7 @@ class NotificationPreference(models.Model):
     system_push = models.BooleanField(default=False, verbose_name="Sistema (Push)")
     system_email = models.BooleanField(default=False, verbose_name="Sistema (Email)")
     
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -119,7 +120,7 @@ class NotificationPreference(models.Model):
         
         Args:
             notification_type: 'ORDER_CONFIRMED', 'NEW_OFFER', etc.
-            channel: 'in_app', 'push', 'email'
+            channel: 'IN_APP', 'PUSH', 'EMAIL' (mayúsculas como en CHANNEL_CHOICES)
         
         Returns:
             bool: True si está habilitado, False si no
@@ -137,8 +138,11 @@ class NotificationPreference(models.Model):
             'SYSTEM_ALERT': 'system',
         }
         
+        # Normalizar canal a minúsculas para el nombre del campo
+        channel_lower = channel.lower()
+        
         category = type_mapping.get(notification_type, 'system')
-        field_name = f'{category}_{channel}'
+        field_name = f'{category}_{channel_lower}'
         
         return getattr(self, field_name, True)
 

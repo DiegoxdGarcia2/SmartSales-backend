@@ -113,15 +113,17 @@ DATABASES = {
         default=os.environ.get('DATABASE_URL', 'postgresql://postgres:admin123@localhost:5432/smartsales_db'),
         conn_max_age=600,  # Reutilizar conexiones
         conn_health_checks=True,
-        ssl_require=True,  # Requiere SSL en producción
     )
 }
 
-# Configuración SSL para PostgreSQL en producción (Render)
+# Configuración SSL para PostgreSQL en producción (Render/Cloud Run)
+if not DEBUG and 'OPTIONS' not in DATABASES['default']:
+    DATABASES['default']['OPTIONS'] = {}
+
 if not DEBUG:
-    DATABASES['default']['OPTIONS'] = {
+    DATABASES['default']['OPTIONS'].update({
         'sslmode': 'require',
-    }
+    })
 
 
 # Password validation
@@ -310,7 +312,7 @@ FIREBASE_CREDENTIALS_PATH = os.environ.get(
 )
 FIREBASE_WEB_PUSH_CERTIFICATE = os.environ.get(
     'FIREBASE_WEB_PUSH_CERTIFICATE',
-    '7rVPMZoay6m1vIC8k61PaqIu5vL_cSSxm_04t2GxepQ'  # VAPID Key
+    'BAy2aACkD_nBjgeWUFvPXxjwBBhVPEXhUVZD7Ldsu9IwlY7sSvgVJ5DPLop82OTWAoG0Qb4Wyr6aaJ8kJiAlEJw'  # VAPID Key (Par de claves público)
 )
 
 # Inicializar Firebase Admin SDK

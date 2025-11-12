@@ -12,8 +12,8 @@ from .views import (
 
 # Router para ViewSets
 router = DefaultRouter()
-router.register(r'', NotificationViewSet, basename='notification')
-router.register(r'devices', DeviceTokenViewSet, basename='device-token')
+router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'fcm-tokens', DeviceTokenViewSet, basename='fcm-token')
 
 urlpatterns = [
     # Preferencias de notificaciones

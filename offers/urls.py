@@ -7,7 +7,8 @@ from .views import (
     OfferViewSet,
     OfferProductViewSet,
     UserOfferInteractionViewSet,
-    OfferRecommendationViewSet
+    OfferRecommendationViewSet,
+    OfferCategoriesView
 )
 
 # Crear router
@@ -21,5 +22,6 @@ router.register(r'recommendations', OfferRecommendationViewSet, basename='offer-
 
 # URLs
 urlpatterns = [
+    path('categories/', OfferCategoriesView.as_view(), name='offer-categories'),
     path('', include(router.urls)),
 ]

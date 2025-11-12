@@ -67,6 +67,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         if notification_type:
             queryset = queryset.filter(type=notification_type)
         
+        # Obtener el count ANTES de limitar
+        total_count = queryset.count()
+        
         # Limitar resultados
         limit = request.query_params.get('limit', None)
         if limit:
@@ -78,7 +81,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         
         return Response({
-            'count': queryset.count(),
+            'count': total_count,
             'results': serializer.data
         })
     
