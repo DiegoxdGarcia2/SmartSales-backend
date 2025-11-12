@@ -48,8 +48,8 @@ class Notification(models.Model):
     data = models.JSONField(null=True, blank=True, help_text="Datos adicionales para la notificación")
     
     # Acción (link/botón)
-    action_url = models.CharField(max_length=500, blank=True, help_text="URL de destino al hacer click")
-    action_text = models.CharField(max_length=100, blank=True, default='Ver Detalles')
+    action_url = models.CharField(max_length=500, blank=True, null=True, help_text="URL de destino al hacer click")
+    action_text = models.CharField(max_length=100, blank=True, null=True, default='Ver Detalles')
     
     # Estado
     is_read = models.BooleanField(default=False)
