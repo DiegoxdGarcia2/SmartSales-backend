@@ -15,16 +15,31 @@ class CartItemSerializer(serializers.ModelSerializer):
         write_only=True
     )
     item_price = serializers.SerializerMethodField()
+    base_price = serializers.SerializerMethodField()
+    discount_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'product_id', 'quantity', 'item_price']
+        fields = ['id', 'product', 'product_id', 'quantity', 'discount_percentage', 
+                  'item_price', 'base_price', 'discount_amount']
 
     def get_item_price(self, obj):
         """
-        Calcula el precio total del item
+        Calcula el precio total del item con descuento aplicado
         """
         return obj.get_item_price()
+    
+    def get_base_price(self, obj):
+        """
+        Calcula el precio base sin descuento
+        """
+        return obj.get_base_price()
+    
+    def get_discount_amount(self, obj):
+        """
+        Calcula el monto del descuento aplicado
+        """
+        return obj.get_discount_amount()
 
     def validate_quantity(self, value):
         """
@@ -32,6 +47,14 @@ class CartItemSerializer(serializers.ModelSerializer):
         """
         if value < 1:
             raise serializers.ValidationError("La cantidad debe ser al menos 1")
+        return value
+    
+    def validate_discount_percentage(self, value):
+        """
+        Valida que el porcentaje de descuento esté entre 0 y 100
+        """
+        if value < 0 or value > 100:
+            raise serializers.ValidationError("El descuento debe estar entre 0 y 100")
         return value
 
     def validate(self, data):

@@ -54,6 +54,13 @@ class CartItem(models.Model):
         default=1,
         verbose_name='Cantidad'
     )
+    discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name='Porcentaje de Descuento',
+        help_text='Descuento aplicado a este item (0-100)'
+    )
 
     class Meta:
         verbose_name = 'Item de Carrito'
@@ -70,9 +77,24 @@ class CartItem(models.Model):
 
     def get_item_price(self):
         """
-        Calcula el precio total del item (cantidad * precio unitario)
+        Calcula el precio total del item (cantidad * precio unitario) con descuento aplicado
+        """
+        base_price = Decimal(str(self.quantity)) * self.product.price
+        discount = base_price * (Decimal(str(self.discount_percentage)) / Decimal('100'))
+        return base_price - discount
+    
+    def get_base_price(self):
+        """
+        Calcula el precio base sin descuento
         """
         return Decimal(str(self.quantity)) * self.product.price
+    
+    def get_discount_amount(self):
+        """
+        Calcula el monto del descuento aplicado
+        """
+        base_price = self.get_base_price()
+        return base_price * (Decimal(str(self.discount_percentage)) / Decimal('100'))
 
 
 class Order(models.Model):

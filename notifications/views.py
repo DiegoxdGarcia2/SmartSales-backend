@@ -168,7 +168,8 @@ class NotificationPreferenceView(APIView):
     Vista para gestionar las preferencias de notificación del usuario.
     
     GET: Obtener preferencias actuales
-    PATCH: Actualizar preferencias
+    PUT: Actualizar preferencias (completo o parcial)
+    PATCH: Actualizar preferencias (parcial)
     """
     
     permission_classes = [IsAuthenticated]
@@ -185,6 +186,23 @@ class NotificationPreferenceView(APIView):
     
     def patch(self, request):
         """Actualiza las preferencias de notificación del usuario"""
+        prefs, _ = NotificationPreference.objects.get_or_create(user=request.user)
+        serializer = NotificationPreferenceSerializer(prefs, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'message': 'Preferencias actualizadas correctamente',
+                'preferences': serializer.data
+            })
+        
+        return Response({
+            'message': 'Error al actualizar preferencias',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request):
+        """Actualiza las preferencias de notificación del usuario (completo o parcial)"""
         prefs, _ = NotificationPreference.objects.get_or_create(user=request.user)
         serializer = NotificationPreferenceSerializer(prefs, data=request.data, partial=True)
         

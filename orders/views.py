@@ -154,10 +154,8 @@ class CartView(APIView):
                 cart__user=request.user
             )
             cart_item.delete()
-            return Response(
-                {'message': 'Item eliminado del carrito'},
-                status=status.HTTP_204_NO_CONTENT
-            )
+            # 204 No Content NO debe incluir body
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except CartItem.DoesNotExist:
             return Response(
                 {'error': 'Item no encontrado en tu carrito'},
