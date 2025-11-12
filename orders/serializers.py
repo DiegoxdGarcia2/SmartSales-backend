@@ -104,16 +104,49 @@ class OrderItemSerializer(serializers.ModelSerializer):
     """
     product = ProductSerializer(read_only=True)
     item_price = serializers.SerializerMethodField()
+    base_price = serializers.SerializerMethodField()
+    discount_percentage = serializers.SerializerMethodField()
+    discount_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price', 'item_price']
+        fields = [
+            'id', 'product', 'quantity', 'price', 'item_price',
+            'base_price', 'discount_percentage', 'discount_amount'
+        ]
 
     def get_item_price(self, obj):
         """
         Calcula el precio total del item
         """
         return obj.get_item_price()
+
+    def get_base_price(self, obj):
+        """
+        Calcula el precio base sin descuento
+        """
+        if obj.product:
+            return obj.product.price * obj.quantity
+        return 0
+
+    def get_discount_percentage(self, obj):
+        """
+        Calcula el porcentaje de descuento aplicado
+        """
+        if obj.product and obj.product.price > 0:
+            original_unit_price = obj.product.price
+            discount = (original_unit_price - obj.price) / original_unit_price * 100
+            return max(0, discount)  # No mostrar descuentos negativos
+        return 0
+
+    def get_discount_amount(self, obj):
+        """
+        Calcula el monto del descuento aplicado
+        """
+        if obj.product:
+            original_total = obj.product.price * obj.quantity
+            return original_total - obj.get_item_price()
+        return 0
 
 
 class OrderSerializer(serializers.ModelSerializer):

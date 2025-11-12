@@ -297,3 +297,223 @@ class TestNotificationView(APIView):
             'message': 'Notificación de prueba enviada',
             'results': result
         })
+
+
+class DebugNotificationView(APIView):
+    """
+    Vista para debuggear problemas con notificaciones.
+    Solo accesible para administradores.
+    """
+    
+    permission_classes = [IsAuthenticated]  # Cambiar a IsAdminUser en producción
+    
+    def get(self, request):
+        """Obtiene información de debug sobre las notificaciones del usuario"""
+        from .models import NotificationPreference, DeviceToken
+        
+        user = request.user
+        
+        # Preferencias
+        prefs, _ = NotificationPreference.objects.get_or_create(user=user)
+        prefs_data = {
+            'orders_in_app': prefs.orders_in_app,
+            'orders_push': prefs.orders_push,
+            'orders_email': prefs.orders_email,
+            'offers_in_app': prefs.offers_in_app,
+            'offers_push': prefs.offers_push,
+            'offers_email': prefs.offers_email,
+            'system_in_app': prefs.system_in_app,
+            'system_push': prefs.system_push,
+            'system_email': prefs.system_email,
+        }
+        
+        # Tokens FCM
+        tokens = DeviceToken.objects.filter(user=user, is_active=True)
+        tokens_data = []
+        for token in tokens:
+            tokens_data.append({
+                'id': token.id,
+                'device_type': token.device_type,
+                'device_name': token.device_name,
+                'last_used': token.last_used,
+                'created_at': token.created_at,
+            })
+        
+        # Notificaciones recientes
+        recent_notifications = Notification.objects.filter(
+            user=user
+        ).order_by('-created_at')[:10]
+        
+        notifications_data = []
+        for notif in recent_notifications:
+            notifications_data.append({
+                'id': notif.id,
+                'type': notif.type,
+                'channel': notif.channel,
+                'title': notif.title,
+                'message': notif.message[:100] + '...' if len(notif.message) > 100 else notif.message,
+                'is_read': notif.is_read,
+                'created_at': notif.created_at,
+                'sent_at': notif.sent_at,
+            })
+        
+        return Response({
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+            },
+            'preferences': prefs_data,
+            'fcm_tokens': {
+                'count': tokens.count(),
+                'tokens': tokens_data,
+            },
+            'recent_notifications': {
+                'count': recent_notifications.count(),
+                'notifications': notifications_data,
+            }
+        })
+    
+    def post(self, request):
+        """
+        Envía notificaciones de prueba específicas (pago u oferta).
+        
+        Body params:
+        - type: 'payment' o 'offer'
+        - order_id: ID de la orden (para pago)
+        - product_id: ID del producto (para oferta)
+        """
+        from .services import NotificationService
+        from orders.models import Order
+        from products.models import Product
+        
+        notif_type = request.data.get('type')
+        
+        if notif_type == 'payment':
+            order_id = request.data.get('order_id')
+            if not order_id:
+                return Response(
+                    {'error': 'order_id es requerido para notificación de pago'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                order = Order.objects.get(id=order_id, user=request.user)
+                result = NotificationService.notify_payment_success(order)
+                return Response({
+                    'message': 'Notificación de pago enviada',
+                    'order_id': order_id,
+                    'result': result
+                })
+            except Order.DoesNotExist:
+                return Response(
+                    {'error': 'Orden no encontrada'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        elif notif_type == 'offer':
+            product_id = request.data.get('product_id')
+            if not product_id:
+                return Response(
+                    {'error': 'product_id es requerido para notificación de oferta'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                product = Product.objects.get(id=product_id)
+                result = NotificationService.notify_new_offer(
+                    user=request.user,
+                    product=product,
+                    discount_percentage=25  # 25% de descuento de prueba
+                )
+                return Response({
+                    'message': 'Notificación de oferta enviada',
+                    'product_id': product_id,
+                    'result': result
+                })
+            except Product.DoesNotExist:
+                return Response(
+                    {'error': 'Producto no encontrado'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        else:
+            return Response(
+                {'error': 'Tipo de notificación inválido. Use "payment" o "offer"'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    def post(self, request):
+        """
+        Ejecuta tareas de mantenimiento de notificaciones
+        - check_expiring_offers: Verifica ofertas por expirar
+        """
+        action = request.data.get('action')
+        
+        if action == 'check_expiring_offers':
+            try:
+                from offers.services import OfferService
+                expiring_offers = OfferService.check_expiring_offers()
+                
+                return Response({
+                    'message': f'Verificación completada. {len(expiring_offers)} ofertas notificadas.',
+                    'expiring_offers_count': len(expiring_offers),
+                    'expiring_offers': [{'id': o.id, 'name': o.name, 'end_date': o.end_date} for o in expiring_offers]
+                })
+                
+            except Exception as e:
+                return Response(
+                    {'error': f'Error ejecutando check_expiring_offers: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        elif action == 'test_all_notifications':
+            # Probar todas las notificaciones disponibles
+            results = {}
+            
+            try:
+                # Notificación de pago (usando una orden existente si hay)
+                from orders.models import Order
+                order = Order.objects.filter(user=request.user).first()
+                if order:
+                    results['payment_success'] = NotificationService.notify_payment_success(order)
+                else:
+                    results['payment_success'] = {'error': 'No hay órdenes para el usuario'}
+                
+                # Notificación de oferta (usando un producto existente)
+                from products.models import Product
+                product = Product.objects.first()
+                if product:
+                    results['new_offer'] = NotificationService.notify_new_offer(
+                        user=request.user,
+                        product=product,
+                        discount_percentage=25
+                    )
+                else:
+                    results['new_offer'] = {'error': 'No hay productos disponibles'}
+                
+                # Notificación del sistema
+                results['system_alert'] = NotificationService.send_notification(
+                    user=request.user,
+                    notification_type='SYSTEM_ALERT',
+                    title='Prueba de Notificación del Sistema',
+                    message='Esta es una notificación de prueba del sistema.',
+                    icon='🧪'
+                )
+                
+                return Response({
+                    'message': 'Todas las notificaciones de prueba enviadas',
+                    'results': results
+                })
+                
+            except Exception as e:
+                return Response(
+                    {'error': f'Error probando notificaciones: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        else:
+            return Response(
+                {'error': 'Acción inválida. Use "check_expiring_offers" o "test_all_notifications"'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

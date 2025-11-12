@@ -7,7 +7,8 @@ from .views import (
     NotificationViewSet,
     NotificationPreferenceView,
     DeviceTokenViewSet,
-    TestNotificationView
+    TestNotificationView,
+    DebugNotificationView
 )
 
 # Router para ViewSets
@@ -21,6 +22,9 @@ urlpatterns = [
     
     # Endpoint de prueba
     path('test/', TestNotificationView.as_view(), name='test-notification'),
+    
+    # Endpoint de debug
+    path('debug/', DebugNotificationView.as_view(), name='debug-notification'),
     
     # ViewSets (notificaciones y tokens)
     path('', include(router.urls)),

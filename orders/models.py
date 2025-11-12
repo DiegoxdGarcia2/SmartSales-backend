@@ -105,6 +105,7 @@ class Order(models.Model):
         ('PENDIENTE', 'Pendiente'),
         ('PAGADO', 'Pagado'),
         ('ENVIADO', 'Enviado'),
+        ('ENTREGADO', 'Entregado'),
         ('CANCELADO', 'Cancelado'),
     ]
 

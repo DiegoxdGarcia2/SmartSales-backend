@@ -13,6 +13,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 import stripe
 import logging
+from decimal import Decimal
 
 from .models import Cart, CartItem, Order, OrderItem
 from .serializers import (
@@ -228,11 +229,14 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
 
                 # Crear OrderItems y reducir stock
                 for item in cart_items:
+                    # Calcular precio unitario con descuento aplicado
+                    unit_price_with_discount = item.get_item_price() / Decimal(str(item.quantity))
+                    
                     OrderItem.objects.create(
                         order=order,
                         product=item.product,
                         quantity=item.quantity,
-                        price=item.product.price
+                        price=unit_price_with_discount  # Guardar precio con descuento
                     )
                     # Reducir stock
                     item.product.stock -= item.quantity
@@ -254,6 +258,46 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
                 {'error': f'Error al crear la orden: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def update_status(self, request, pk=None):
+        """
+        Permite a administradores actualizar el estado de una orden
+        y automáticamente envía notificaciones
+        """
+        if not request.user.is_staff:
+            return Response(
+                {'error': 'Solo administradores pueden cambiar el estado de órdenes'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        order = self.get_object()
+        new_status = request.data.get('status')
+        
+        if not new_status:
+            return Response(
+                {'error': 'status es requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar que el estado sea válido
+        valid_statuses = [choice[0] for choice in Order.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            return Response(
+                {'error': f'Estado inválido. Estados válidos: {valid_statuses}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        old_status = order.status
+        order.status = new_status
+        order.save()
+        
+        return Response({
+            'message': f'Estado de orden actualizado de {old_status} a {new_status}',
+            'order_id': order.id,
+            'old_status': old_status,
+            'new_status': new_status
+        })
 
 
 class CreateCheckoutSessionView(APIView):

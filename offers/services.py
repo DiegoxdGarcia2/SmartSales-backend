@@ -418,13 +418,16 @@ class OfferService:
     def _notify_user_about_offer(user, offer):
         """Notifica a un usuario sobre una nueva oferta personalizada"""
         try:
-            NotificationService.notify_new_offer(
-                user=user,
-                offer_name=offer.name,
-                discount=str(offer.discount_percentage),
-                end_date=offer.end_date,
-                action_url=f'/offers/{offer.id}'
-            )
+            # Obtener un producto de la oferta para la notificación
+            offer_product = offer.offer_products.first()
+            if offer_product:
+                NotificationService.notify_new_offer(
+                    user=user,
+                    product=offer_product.product,
+                    discount_percentage=offer.discount_percentage
+                )
+            else:
+                logger.warning(f"Oferta {offer.id} no tiene productos asociados")
         except Exception as e:
             logger.error(f"Error al notificar usuario {user.id} sobre oferta {offer.id}: {str(e)}")
     
@@ -433,15 +436,17 @@ class OfferService:
         """Notifica a todos los usuarios sobre una venta flash"""
         try:
             active_users = User.objects.filter(is_active=True)
-            for user in active_users:
-                NotificationService.notify_new_offer(
-                    user=user,
-                    offer_name=offer.name,
-                    discount=str(offer.discount_percentage),
-                    end_date=offer.end_date,
-                    action_url=f'/offers/{offer.id}'
-                )
-            logger.info(f"Notificados {active_users.count()} usuarios sobre flash sale: {offer.name}")
+            offer_product = offer.offer_products.first()
+            if offer_product:
+                for user in active_users:
+                    NotificationService.notify_new_offer(
+                        user=user,
+                        product=offer_product.product,
+                        discount_percentage=offer.discount_percentage
+                    )
+                logger.info(f"Notificados {active_users.count()} usuarios sobre flash sale: {offer.name}")
+            else:
+                logger.warning(f"Flash sale {offer.id} no tiene productos asociados")
         except Exception as e:
             logger.error(f"Error al notificar flash sale {offer.id}: {str(e)}")
     
@@ -458,16 +463,18 @@ class OfferService:
                 orders__items__product_id__in=product_ids
             ).distinct()[:100]  # Limitar a 100 usuarios
             
-            for user in interested_users:
-                NotificationService.notify_new_offer(
-                    user=user,
-                    offer_name=offer.name,
-                    discount=str(offer.discount_percentage),
-                    end_date=offer.end_date,
-                    action_url=f'/offers/{offer.id}'
-                )
-            
-            logger.info(f"Notificados {interested_users.count()} usuarios interesados sobre: {offer.name}")
+            offer_product = offer.offer_products.first()
+            if offer_product:
+                for user in interested_users:
+                    NotificationService.notify_new_offer(
+                        user=user,
+                        product=offer_product.product,
+                        discount_percentage=offer.discount_percentage
+                    )
+                
+                logger.info(f"Notificados {interested_users.count()} usuarios interesados sobre: {offer.name}")
+            else:
+                logger.warning(f"Oferta {offer.id} no tiene productos asociados")
         except Exception as e:
             logger.error(f"Error al notificar usuarios interesados en oferta {offer.id}: {str(e)}")
     
@@ -476,11 +483,14 @@ class OfferService:
         """Notifica a un usuario que una oferta está por expirar"""
         try:
             hours_left = offer.hours_remaining()
-            NotificationService.notify_offer_expiring(
-                user=user,
-                offer_name=offer.name,
-                hours_left=hours_left,
-                action_url=f'/offers/{offer.id}'
-            )
+            offer_product = offer.offer_products.first()
+            if offer_product:
+                NotificationService.notify_offer_expiring(
+                    user=user,
+                    product=offer_product.product,
+                    hours_left=hours_left
+                )
+            else:
+                logger.warning(f"Oferta expirando {offer.id} no tiene productos asociados")
         except Exception as e:
             logger.error(f"Error al notificar expiración de oferta {offer.id} a usuario {user.id}: {str(e)}")
