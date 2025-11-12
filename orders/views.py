@@ -46,6 +46,7 @@ class CartView(APIView):
         """
         product_id = request.data.get('product_id')
         quantity = request.data.get('quantity', 1)
+        discount_percentage = request.data.get('discount_percentage', 0)  # 🆕 Capturar descuento
 
         if not product_id:
             return Response(
@@ -75,11 +76,14 @@ class CartView(APIView):
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
-            defaults={'quantity': quantity}
+            defaults={
+                'quantity': quantity,
+                'discount_percentage': discount_percentage  # 🆕 Guardar descuento
+            }
         )
 
         if not created:
-            # Si ya existe, actualizar la cantidad
+            # Si ya existe, actualizar la cantidad Y el descuento
             new_quantity = cart_item.quantity + quantity
             if new_quantity > product.stock:
                 return Response(
@@ -87,6 +91,9 @@ class CartView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             cart_item.quantity = new_quantity
+            # 🆕 Actualizar descuento si viene en la petición
+            if discount_percentage > 0:
+                cart_item.discount_percentage = discount_percentage
             cart_item.save()
 
         serializer = CartItemSerializer(cart_item)
