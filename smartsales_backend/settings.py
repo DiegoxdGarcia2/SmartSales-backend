@@ -198,12 +198,11 @@ SPECTACULAR_SETTINGS = {
 }
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',   # Puerto estándar de React
-    'http://localhost:3039',   # Puerto de desarrollo actual
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3039',
-]
+CORS_ALLOWED_ORIGINS_STRING = os.environ.get(
+    'CORS_ALLOWED_ORIGINS', 
+    'http://localhost:3039 http://127.0.0.1:3039' # Valor default para desarrollo
+)
+CORS_ALLOWED_ORIGINS = CORS_ALLOWED_ORIGINS_STRING.split(' ') if CORS_ALLOWED_ORIGINS_STRING else []
 
 # Permite todos los headers y métodos para CORS
 CORS_ALLOW_HEADERS = [
